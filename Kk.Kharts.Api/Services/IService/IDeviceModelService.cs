@@ -1,0 +1,14 @@
+﻿using Kk.Kharts.Shared.DTOs;
+using Kk.Kharts.Shared.Entities;
+
+namespace Kk.Kharts.Api.Services.IService
+{
+    public interface IDeviceModelService
+    {
+        Task<List<DeviceModelDto>> GetAllModelsAsync();
+
+        Task<DeviceModelDto?> GetModelByDevEuiAsync(string devEui);
+
+
+    }
+}
