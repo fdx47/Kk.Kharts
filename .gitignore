@@ -146,3 +146,19 @@ dist-ssr/
 *.nuxt
 .nuxt/
 .output/
+
+# MAUI / Xamarin
+*.apk
+*.aab
+*.ipa
+*.app
+*.xcarchive
+*.dSYM.zip
+*.dSYM
+platforms/
+*.csproj.user
+*.nuget.props
+*.nuget.targets
+mono_crash.*
+Resource.designer.cs
+
