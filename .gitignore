@@ -119,3 +119,30 @@ coverage/
 
 # NuGet
 NuGet.Config.user
+
+# Vue.js / Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env.local
+.env.*.local
+.npm
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Vue.js build outputs
+*.js.map
+*.css.map
+
+# Quasar / Vite
+.quasar/
+.vite/
+.vite-ssr/
+*.nuxt
+.nuxt/
+.output/
