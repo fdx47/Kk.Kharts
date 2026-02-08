@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?xaml-comp compile="true" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- KropKontrol Brand Colors (Modern AgTech) -->
+    <Color x:Key="Primary">#10B981</Color> <!-- Emerald 500: Modern, Vibrant, Growth -->
+    <Color x:Key="PrimaryDark">#059669</Color> <!-- Emerald 600 -->
+    <Color x:Key="PrimaryLight">#ECFDF5</Color> <!-- Emerald 50 -->
+    <Color x:Key="Secondary">#0EA5E9</Color> <!-- Sky 500: Water, Tech -->
+    <Color x:Key="SecondaryDark">#0284C7</Color>
+    <Color x:Key="Accent">#F59E0B</Color> <!-- Amber 500 -->
+
+    <!-- Background Colors (Clean & Soft) -->
+    <Color x:Key="Background">#F8FAFC</Color> <!-- Slate 50: Soft off-white -->
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceLight">#F1F5F9</Color> <!-- Slate 100 -->
+    <Color x:Key="SurfaceDark">#E2E8F0</Color>
+
+    <!-- Text Colors -->
+    <Color x:Key="TextPrimary">#263238</Color> <!-- Dark Blue-Grey: Sharp, Professional -->
+    <Color x:Key="TextSecondary">#546E7A</Color> <!-- Medium Blue-Grey -->
+    <Color x:Key="TextDisabled">#B0BEC5</Color>
+    <Color x:Key="TextInverse">#FFFFFF</Color>
+    <Color x:Key="White">#FFFFFF</Color>
+
+    <!-- Semantic Colors -->
+    <Color x:Key="Success">#2E7D32</Color>
+    <Color x:Key="Warning">#F9A825</Color>
+    <Color x:Key="Error">#C62828</Color>
+    <Color x:Key="Info">#0277BD</Color>
+
+    <!-- Chart Colors (Nature & Tech) -->
+    <Color x:Key="ChartBlue">#0288D1</Color> <!-- Water -->
+    <Color x:Key="ChartGreen">#43A047</Color> <!-- Plants -->
+    <Color x:Key="ChartOrange">#FB8C00</Color> <!-- Heat/Sun -->
+    <Color x:Key="ChartPurple">#8E24AA</Color> <!-- UV/Special -->
+    <Color x:Key="ChartRed">#E53935</Color> <!-- Alerts -->
+    <Color x:Key="ChartYellow">#FDD835</Color> <!-- Light -->
+
+    <!-- Gradients -->
+    <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#00E676" Offset="0.0" />
+        <GradientStop Color="#00B359" Offset="1.0" />
+    </LinearGradientBrush>
+    
+    <LinearGradientBrush x:Key="SurfaceGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#3A3A3A" Offset="0.0" />
+        <GradientStop Color="#2A2A2A" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="ModernBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#D9FBE9" Offset="0.0" /> <!-- Soft mint -->
+        <GradientStop Color="#E8FBFF" Offset="0.45" /> <!-- Gentle aqua -->
+        <GradientStop Color="#F4F9FF" Offset="1.0" /> <!-- Calm sky white -->
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="DashboardBackgroundBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#E8FFF3" Offset="0.0" /> <!-- Misty mint -->
+        <GradientStop Color="#F2FBFF" Offset="0.55" /> <!-- Soft aqua white -->
+        <GradientStop Color="#FFFFFF" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="HeroCardBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#31E09D" Offset="0.0" />
+        <GradientStop Color="#22C995" Offset="0.55" />
+        <GradientStop Color="#18AF8C" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="HeroIconBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#0C6046" Offset="0.0" />
+        <GradientStop Color="#0F7D57" Offset="0.6" />
+        <GradientStop Color="#129C6A" Offset="1.0" />
+    </LinearGradientBrush>
+
+</ResourceDictionary>

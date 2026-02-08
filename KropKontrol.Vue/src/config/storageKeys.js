@@ -1,0 +1,10 @@
+export const LS_COORDS = "kk_coords";
+export const LS_TIMEZONE = "kk_tz";
+export const LS_AUTH_TOKEN = "authTokenKropKharts";
+export const LS_REFRESH_TOKEN = "refreshTokenKropKharts";
+export const LS_REFRESH_EXPIRY = "dateExpirationRefreshTokenKropKharts";
+export const LS_DEVICE_THRESHOLDS = "deviceThresholds";
+export const LS_VIRTUAL_GROUPS_PREFIX = "virtualGroups_";
+export const LS_DASHBOARD_STATE_PREFIX = "dashboardState_";
+export const LS_SPECIFIC_CHARTS_PREFIX = "specificChartsConfig_";
+export const LS_CUSTOM_SCALES_PREFIX = "kk_customScales_";

@@ -1,0 +1,11 @@
+The Poppins font family should be downloaded from Google Fonts:
+https://fonts.google.com/specimen/Poppins
+
+Download and place the following files in this folder:
+- Poppins-Regular.ttf
+- Poppins-SemiBold.ttf
+- Poppins-Bold.ttf
+
+Also include OpenSans fonts:
+- OpenSans-Regular.ttf
+- OpenSans-Semibold.ttf

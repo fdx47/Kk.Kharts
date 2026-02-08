@@ -1,0 +1,119 @@
+﻿@page "/fdx2"
+@using ApexCharts
+@using System.Linq
+@inject HttpClient Http
+
+<PageTitle>Données des Capteurs</PageTitle>
+
+<h3 class="mb-4">Données UC502WET150</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+else if (!SensorDataList.Any())
+{
+    <div class="alert alert-warning">
+        Aucune donnée disponible
+    </div>
+}
+else
+{
+    @* <div class="row">
+        <div class="col-md-6 mb-4">
+            <ApexChart TItem="SensorData" 
+                      Title="Température du Sol (°C)" 
+                      Height="350"
+                      XAxisType="XAxisType.Datetime">
+                <ApexLineSeries TItem="SensorData"
+                              Items="SensorDataList"
+                              Name="Température"
+                              XValue="@((item) => item.Timestamp)"
+                              YValue="@((item) => item.SoilTemperature)">
+                    <SeriesOrderBy Func="(item) => item.Timestamp"/>
+                </ApexLineSeries>
+            </ApexChart>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <ApexChart TItem="SensorData" 
+                      Title="Conductivité Électrique (ECb)" 
+                      Height="350"
+                      XAxisType="XAxisType.Datetime">
+                <ApexLineSeries TItem="SensorData"
+                              Items="SensorDataList"
+                              Name="ECb"
+                              XValue="@((item) => item.Timestamp)"
+                              YValue="@((item) => item.ECb)">
+                    <SeriesOrderBy Func="(item) => item.Timestamp"/>
+                </ApexLineSeries>
+            </ApexChart>
+        </div>
+    </div> *@
+}
+
+@code {
+    private List<SensorData> SensorDataList { get; set; } = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private readonly string devEui = "24E124454E048465";
+    private readonly string startDate = DateTime.Now.AddDays(-7).ToString("yyyy-MM-ddTHH:mm:ss");
+    private readonly string endDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            SensorDataList = await GetSensorDataAsync(devEui, startDate, endDate);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task<List<SensorData>> GetSensorDataAsync(string devEui, string startDate, string endDate)
+    {
+        try
+        {
+            var url = $"api/v1/Uc502Wet150/GetByDevEui?devEui={devEui}" +
+                     $"&startDate={Uri.EscapeDataString(startDate)}" +
+                     $"&endDate={Uri.EscapeDataString(endDate)}";
+            
+            var response = await Http.GetFromJsonAsync<SensorDataResponse>(url);
+            return response?.Data?.OrderBy(x => x.Timestamp).ToList() ?? new List<SensorData>();
+        }
+        catch
+        {
+            return new List<SensorData>();
+        }
+    }
+
+    public class SensorData
+    {
+        public DateTime Timestamp { get; set; }
+        public double SoilTemperature { get; set; }
+        public double ECb { get; set; }
+    }
+
+    public class SensorDataResponse
+    {
+        public List<SensorData> Data { get; set; } = new();
+    }
+}

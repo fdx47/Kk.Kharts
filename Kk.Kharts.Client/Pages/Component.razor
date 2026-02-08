@@ -1,0 +1,83 @@
+﻿@page "/fdx"
+
+<MudCard Class="pa-4">
+    <MudCardHeader>
+        <MudText Typo="Typo.h5">Graphique de température du capteur EM300-TH</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField Label="Device EUI" @bind-Value="DevEui" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField Label="Jours à soustraire" @bind-Value="DaysToSubtract" Type="number" Immediate="true" OnBlur="HandleBlurCallback" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="Date de début" Date="@StartDate" DateChanged="HandleDateChange" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="Date de fin" Date="@EndDate" DateChanged="OnEndDateChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Color="MudBlazor.Color.Primary" OnClick="LoadData" StartIcon="@Icons.Material.Filled.Search">Rechercher</MudButton>
+            </MudItem>
+        </MudGrid>
+
+        <MudProgressLinear Indeterminate="true" Color="MudBlazor.Color.Primary" Style="margin-top:10px;" Visible="IsLoading" />
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private string DevEui { get; set; }
+    private DateTime StartDate { get; set; } = DateTime.Now; // Inicializa com a data atual
+    private DateTime EndDate { get; set; }
+    private bool IsLoading { get; set; }
+
+    private int DaysToSubtract { get; set; } = 7; // Valor padrão para subtrair 7 dias
+
+    // Método para recalcular a data de início com base no número de dias a serem subtraídos
+    private void CalculateStartDate()
+    {
+        StartDate = DateTime.Now.AddDays(-DaysToSubtract);
+        EndDate = DateTime.Now; // A data de fim será a data de hoje
+    }
+
+    // Método para tratar a mudança na data inicial
+    private void HandleDateChange(DateTime? newDate)
+    {
+        if (newDate.HasValue)
+        {
+            // Recalcula a data de início com base na data selecionada no MudDatePicker
+            StartDate = newDate.Value.AddDays(-DaysToSubtract);
+        }
+    }
+
+    // Método para lidar com a mudança na data final
+    private void OnEndDateChanged(DateTime? newDate)
+    {
+        EndDate = newDate ?? DateTime.Now; // Define EndDate como a data selecionada ou, se null, a data atual
+    }
+
+    // Método para carregar os dados
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        // Lógica para carregar os dados aqui
+        IsLoading = false;
+    }
+
+    // Método que lida com o evento OnBlur para calcular a data de início
+    private void HandleBlur()
+    {
+        CalculateStartDate();
+    }
+
+    // EventCallback para o evento OnBlur
+    private EventCallback HandleBlurCallback => EventCallback.Factory.Create(this, HandleBlur);
+
+    // No OnInitialized, definimos a data inicial
+    protected override void OnInitialized()
+    {
+        CalculateStartDate(); // Calcula a data inicial ao carregar o componente
+    }
+}

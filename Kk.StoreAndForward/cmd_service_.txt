@@ -1,0 +1,29 @@
+===============================================================================================
+=== Ce script doit être exécuté dans PowerShell avec un niveau de privilèges administrateur === 
+===                                                                                         === 
+===                                    WIN + X                                              === 
+===============================================================================================
+
+New-Service -Name "KK.UG6x.StoreAndForward" -BinaryPathName "C:\3ctec\KK.UG6x.StoreAndForward\KK.UG6x.StoreAndForward.exe" -Description "KropKontrol Store And Forward" -DisplayName "KK.UG6x.StoreAndForward"
+
+
+
+Start-Service -Name "KK.UG6x.StoreAndForward"
+
+
+
+
+
+Get-Service -Name *Nom*
+
+
+Get-Service -Name *KK.UG6x.StoreAndForward*
+
+
+
+
+sc.exe delete "KK.UG6x.StoreAndForward"
+
+
+Remove-Service -Name "KK.UG6x.StoreAndForward"
+

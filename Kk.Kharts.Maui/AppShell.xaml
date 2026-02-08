@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Kk.Kharts.Maui.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Kk.Kharts.Maui.Views"
+    Shell.FlyoutBehavior="Disabled"
+    Shell.NavBarIsVisible="True"
+    Shell.TabBarIsVisible="True">
+
+    <!-- Login Route (no tabs) -->
+    <ShellContent
+        x:Name="LoginShell"
+        Route="login"
+        ContentTemplate="{DataTemplate views:LoginPage}"
+        Shell.TabBarIsVisible="False"
+        Shell.NavBarIsVisible="False" />
+
+    <!-- Main App with Tab Bar -->
+    <TabBar Route="main">
+        <ShellContent
+            Title="Dashboard"
+            Icon="dashboard.png"
+            Route="dashboard"
+            Shell.NavBarIsVisible="False"
+            SemanticProperties.Description="Dashboard"
+            ContentTemplate="{DataTemplate views:DashboardPage}" />
+
+        <ShellContent
+            Title="Kapteurs"
+            Icon="devices.png"
+            Route="devices"
+            Shell.NavBarIsVisible="False"
+            SemanticProperties.Description="Kapteurs"
+            ContentTemplate="{DataTemplate views:DevicesPage}" />
+
+        <ShellContent
+            Title="À propos"
+            Icon="settings.png"
+            Route="settings"
+            Shell.NavBarIsVisible="False"
+            SemanticProperties.Description="À propos"
+            ContentTemplate="{DataTemplate views:SettingsPage}" />
+    </TabBar>
+
+</Shell>

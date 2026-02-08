@@ -1,0 +1,66 @@
+﻿@page "/"
+
+@using System.Linq
+@using Kk.Kharts.Client.Models
+@using ApexCharts
+@using Kk.Kharts.Shared.Entities
+@using MudBlazor
+@inject HttpClient Http
+
+<PageTitle>Home</PageTitle>
+
+<MudPaper Class="p-4">
+    <MudText Typo="Typo.h5">Sensor Data - Últimos @Dias dias</MudText>
+
+    <MudSlider @bind-Value="Dias" Min="1" Max="30" Step="1" Style="width: 300px;" />
+
+    <MudButton Variant="MudBlazor.Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="CarregarDados">Atualizar</MudButton>
+
+    <ApexChart TItem="SensorData" Title="Sensor Data Over Time">
+        <ApexPointSeries TItem="SensorData"
+                         Items="SensorDataList"
+                         Name="Soil Temperature"
+                         SeriesType="SeriesType.Line"
+                         XValue="@(e => e.Timestamp)"
+                         YValue="@(e => e.SoilTemperature)" />
+
+        <ApexPointSeries TItem="SensorData"
+                         Items="SensorDataList"
+                         Name="ECb"
+                         SeriesType="SeriesType.Line"
+                         XValue="@(e => e.Timestamp)"
+                         YValue="@(e => e.ECb)" />
+    </ApexChart>
+</MudPaper>
+
+@code {
+    private List<SensorData> SensorDataList { get; set; } = new();
+    private int Dias { get; set; } = 7;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarDados();
+    }
+
+    private async Task CarregarDados()
+    {
+        var start = DateTime.UtcNow.AddDays(-Dias).ToString("o");
+        var end = DateTime.UtcNow.ToString("o");
+        SensorDataList = await GetSensorDataAsync("24E124454E048465", start, end);
+    }
+
+    public async Task<List<SensorData>> GetSensorDataAsync(string devEui, string startDate, string endDate)
+    {
+        try
+        {
+            string url = $"api/v1/Uc502Wet150/GetByDevEui?devEui={devEui}&startDate={Uri.EscapeDataString(startDate)}&endDate={Uri.EscapeDataString(endDate)}";
+            var response = await Http.GetFromJsonAsync<SensorDataResponse>(url);
+            return response?.Data ?? new List<SensorData>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao buscar dados: {ex.Message}");
+            return new List<SensorData>();
+        }
+    }
+}

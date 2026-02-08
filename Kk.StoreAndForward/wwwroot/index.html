@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="fr" x-data="dashboard()" x-init="init()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KK - Milesight UG6x - Dashboard</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        [x-cloak] { display: none !important; }
+        .gradient-bg { background: linear-gradient(135deg, #1e3a5f 0%, #0d1b2a 100%); }
+        .card-glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .status-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .log-entry { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.75rem; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Login Modal -->
+    <div x-show="!authenticated" x-cloak class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="card-glass rounded-2xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <i class="fas fa-satellite-dish text-5xl text-cyan-400 mb-4"></i>
+                <h1 class="text-2xl font-bold">Kropkontrol - Milesight UG6x</h1>
+                <p class="text-gray-400 text-sm">Store & Forward Service</p>
+            </div>
+            <form @submit.prevent="login()">
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Utilisateur</label>
+                    <input type="text" x-model="loginForm.username" 
+                           class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400"
+                           placeholder="César">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm text-gray-400 mb-2">Mot de passe</label>
+                    <input type="password" x-model="loginForm.password" 
+                           class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400"
+                           placeholder="********">
+                </div>
+                <div x-show="loginError" class="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+                    <span x-text="loginError"></span>
+                </div>
+                <button type="submit" 
+                        class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 rounded-lg transition-colors">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Connexion
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div x-show="authenticated" x-cloak>
+        <!-- Header -->
+        <header class="border-b border-white/10 px-6 py-4">
+            <div class="flex items-center justify-between max-w-7xl mx-auto">
+                <div class="flex items-center gap-4">
+                    <i class="fas fa-satellite-dish text-3xl text-cyan-400"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">Kropkontrol - Milesight UG6x</h1>
+                        <p class="text-gray-400 text-xs flex items-center gap-2">
+                            Store & Forward Service
+                            <span class="px-2.5 py-0.5 rounded-full border border-white/20 bg-white/10 text-cyan-200 text-[10px] font-semibold uppercase tracking-wide">
+                                v0.1.0b
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button @click="setActiveTab('dashboard')" 
+                            :class="activeTab === 'dashboard' ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-400 hover:text-white'"
+                            class="px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-chart-line mr-2"></i>Dashboard
+                    </button>
+                    <button @click="setActiveTab('logs')" 
+                            :class="activeTab === 'logs' ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-400 hover:text-white'"
+                            class="px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-list-alt mr-2"></i>Logs
+                    </button>
+                    <button @click="setActiveTab('settings')" 
+                            :class="activeTab === 'settings' ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-400 hover:text-white'"
+                            class="px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-cog mr-2"></i>Configuration
+                    </button>
+                    <button @click="setActiveTab('maintenance')" 
+                            :class="activeTab === 'maintenance' ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-400 hover:text-white'"
+                            class="px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-tools mr-2"></i>Maintenance
+                    </button>
+                    <button @click="logout()" class="text-gray-400 hover:text-red-400 px-4 py-2 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Déconnexion
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Tab -->
+        <main x-show="activeTab === 'dashboard'" class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Status Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Connection Status -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Connexion Internet</span>
+                        <div :class="data.isOnline ? 'bg-green-500' : 'bg-red-500'" class="w-3 h-3 rounded-full status-pulse"></div>
+                    </div>
+                    <div class="text-2xl font-bold" :class="data.isOnline ? 'text-green-400' : 'text-red-400'">
+                        <span x-text="data.isOnline ? 'Connecté' : 'Hors ligne'"></span>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-400 space-y-1">
+                        <div x-show="data.isForcedOffline" class="flex items-center gap-2 text-yellow-300">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span x-text="data.internetAvailable ? 'Mode forcé Offline (internet détecté)' : 'Mode forcé Offline (internet indisponible)' "></span>
+                        </div>
+                        <div x-show="!data.isForcedOffline" class="flex items-center gap-2" :class="data.internetAvailable ? 'text-green-300' : 'text-red-300'">
+                            <i class="fas" :class="data.internetAvailable ? 'fa-wifi' : 'fa-ban'"></i>
+                            <span x-text="data.internetAvailable ? 'Internet détecté' : 'Internet indisponible'"></span>
+                        </div>
+                        <div x-show="data.isOfflineOnlyMode" class="flex items-center gap-2 text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mt-2">
+                            <i class="fas fa-database"></i>
+                            <span class="text-xs font-semibold">Mode Stockage Uniquement - Les données ne sont pas envoyées vers l'API</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gateway -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Passerelle UG65</span>
+                        <i class="fas fa-broadcast-tower text-cyan-400"></i>
+                    </div>
+                    <div class="text-lg font-semibold text-cyan-400 truncate" x-text="data.gatewayUrl || 'Non connecté'"></div>
+                </div>
+
+                <!-- Pending Packets -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Paquets en attente</span>
+                        <i class="fas fa-clock text-yellow-400"></i>
+                    </div>
+                    <div class="text-2xl font-bold" :class="data.pendingCount > 0 ? 'text-yellow-400' : 'text-gray-400'">
+                        <span x-text="data.pendingCount"></span>
+                    </div>
+                </div>
+
+                <!-- Mapped Devices -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Dispositifs mappés</span>
+                        <i class="fas fa-microchip text-purple-400"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-purple-400">
+                        <span x-text="data.mappedDevicesCount"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Row -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Last Sync -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Dernière synchronisation</span>
+                        <i class="fas fa-sync text-blue-400"></i>
+                    </div>
+                    <div class="text-xl font-semibold text-blue-400" x-text="formatDateTime(data.lastSync)"></div>
+                </div>
+
+                <!-- Last Batch -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Derniers paquets reçus</span>
+                        <i class="fas fa-download text-green-400"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-green-400">
+                        <span x-text="data.lastBatchCount"></span>
+                    </div>
+                </div>
+
+                <!-- Uptime -->
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-400 text-sm">Temps de fonctionnement</span>
+                        <i class="fas fa-hourglass-half text-orange-400"></i>
+                    </div>
+                    <div class="text-xl font-semibold text-orange-400" x-text="formatUptime(data.uptime)"></div>
+                </div>
+            </div>
+
+            <!-- Recent Logs Preview -->
+            <div class="card-glass rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Activité récente</h3>
+                    <button @click="activeTab = 'logs'" class="text-cyan-400 hover:text-cyan-300 text-sm">
+                        Voir tous les logs <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    <template x-for="log in logs.slice(0, 10)" :key="log.timestamp">
+                        <div class="log-entry flex items-start gap-3 py-2 border-b border-white/5">
+                            <span class="text-gray-500 whitespace-nowrap" x-text="formatTime(log.timestamp)"></span>
+                            <span :class="getLogLevelClass(log.level)" class="px-2 py-0.5 rounded text-xs font-semibold uppercase" x-text="log.level"></span>
+                            <span class="text-gray-300" x-text="log.message"></span>
+                        </div>
+                    </template>
+                    <div x-show="logs.length === 0" class="text-gray-500 text-center py-4">
+                        Aucun log disponible
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Logs Tab -->
+        <main x-show="activeTab === 'logs'" class="max-w-7xl mx-auto px-6 py-8">
+            <div class="card-glass rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Journal des événements</h3>
+                    <button @click="refreshLogs()" class="text-cyan-400 hover:text-cyan-300">
+                        <i class="fas fa-refresh mr-2"></i>Actualiser
+                    </button>
+                </div>
+                <div class="space-y-1 max-h-[600px] overflow-y-auto">
+                    <template x-for="log in logs" :key="log.timestamp + log.message">
+                        <div class="log-entry flex items-start gap-3 py-2 border-b border-white/5 hover:bg-white/5">
+                            <span class="text-gray-500 whitespace-nowrap" x-text="formatDateTime(log.timestamp)"></span>
+                            <span :class="getLogLevelClass(log.level)" class="px-2 py-0.5 rounded text-xs font-semibold uppercase min-w-[60px] text-center" x-text="log.level"></span>
+                            <span class="text-gray-300 break-all" x-text="log.message"></span>
+                        </div>
+                    </template>
+                    <div x-show="logs.length === 0" class="text-gray-500 text-center py-8">
+                        Aucun log disponible
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Tab -->
+        <main x-show="activeTab === 'settings'" class="max-w-7xl mx-auto px-6 py-8">
+            <form @submit.prevent="saveSettings()">
+                <!-- Gateway Settings -->
+                <div class="card-glass rounded-xl p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <i class="fas fa-broadcast-tower text-cyan-400"></i>
+                        Configuration Passerelle
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Nom d'utilisateur Gateway</label>
+                            <input type="text" x-model="settings.gatewayUsername" 
+                                   class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400"
+                                   placeholder="administrator">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Mot de passe Gateway</label>
+                            <input type="password" x-model="settings.gatewayPassword" 
+                                   class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400"
+                                   placeholder="••••••••">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Worker Settings -->
+                <div class="card-glass rounded-xl p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <i class="fas fa-cogs text-purple-400"></i>
+                        Configuration Worker
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Intervalle d'exécution (secondes)</label>
+                            <input type="number" x-model="settings.intervalSeconds" min="10" max="3600"
+                                   class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Host de test Internet</label>
+                            <input type="text" x-model="settings.internetCheckHost" 
+                                   class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400"
+                                   placeholder="8.8.8.8">
+                        </div>
+                        <div class="md:col-span-2 flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                            <div>
+                                <p class="text-sm text-gray-200 font-semibold">Forcer mode Offline</p>
+                                <p class="text-xs text-gray-400">Ignorer l'état réel de l'internet pour simuler une indisponibilité.</p>
+                            </div>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only" x-model="settings.forceOffline">
+                                <span class="w-12 h-6 bg-gray-500 rounded-full relative transition">
+                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition"
+                                          :class="settings.forceOffline ? 'translate-x-6 bg-cyan-400' : ''"></span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="md:col-span-2 flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                            <div>
+                                <p class="text-sm text-gray-200 font-semibold">Mode Stockage Uniquement</p>
+                                <p class="text-xs text-gray-400">Enregistrer uniquement dans la base locale SQLite sans jamais envoyer vers l'API Cloud.</p>
+                            </div>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only" x-model="settings.offlineOnlyMode">
+                                <span class="w-12 h-6 bg-gray-500 rounded-full relative transition">
+                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition"
+                                          :class="settings.offlineOnlyMode ? 'translate-x-6 bg-amber-400' : ''"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="flex flex-col gap-4">
+                    <div class="flex justify-end gap-4">
+                        <button type="button" @click="loadSettings()" 
+                                class="px-6 py-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors">
+                            <i class="fas fa-undo mr-2"></i>Annuler
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-lg font-semibold transition-colors">
+                            <i class="fas fa-save mr-2"></i>Enregistrer
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Save Status -->
+                <div x-show="saveStatus" x-transition class="mt-4 p-4 rounded-lg" 
+                     :class="saveStatus === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'">
+                    <span x-text="saveStatus === 'success' ? 'Configuration enregistrée avec succès!' : 'Erreur lors de l\'enregistrement'"></span>
+                </div>
+            </form>
+        </main>
+
+        <!-- Maintenance Tab -->
+        <main x-show="activeTab === 'maintenance'" class="max-w-5xl mx-auto px-6 py-8 space-y-6">
+            <div class="card-glass rounded-2xl p-6 border border-white/10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Maintenance des données locales</h3>
+                        <p class="text-sm text-gray-400">Vider la base locale (paquets en attente et déjà envoyés).</p>
+                    </div>
+                    <button type="button" @click="purgeLocalData()"
+                            class="px-6 py-3 bg-red-500/80 hover:bg-red-600 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Purger maintenant
+                    </button>
+                </div>
+                <div x-show="purgeStatus" x-transition class="p-4 rounded-lg"
+                     :class="purgeStatus === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'">
+                    <span x-text="purgeStatus === 'success' ? 'Base locale vidée avec succès.' : 'Échec lors du nettoyage local.'"></span>
+                </div>
+            </div>
+
+            <div class="card-glass rounded-2xl p-6 border border-white/10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Maintenance Gateway (UR Packets)</h3>
+                        <p class="text-sm text-gray-400">Supprimer les paquets en file d'attente directement sur la passerelle UG65.</p>
+                    </div>
+                    <button type="button" @click="purgeGatewayData()"
+                            class="px-6 py-3 bg-amber-500/80 hover:bg-amber-600 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-broom mr-2"></i>Purger la passerelle
+                    </button>
+                </div>
+                <div x-show="gatewayPurgeStatus" x-transition class="p-4 rounded-lg"
+                     :class="gatewayPurgeStatus === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'">
+                    <span x-text="gatewayPurgeStatus === 'success' ? 'Buffer UG65 vidé avec succès.' : 'Impossible de purger la passerelle.'"></span>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                authenticated: false,
+                activeTab: 'dashboard',
+                loginForm: { username: '', password: '' },
+                loginError: '',
+                data: {
+                    isOnline: false,
+                    gatewayUrl: '',
+                    lastSync: null,
+                    lastBatchCount: 0,
+                    pendingCount: 0,
+                    mappedDevicesCount: 0,
+                    internetAvailable: false,
+                    isForcedOffline: false,
+                    isOfflineOnlyMode: false,
+                    uptime: ''
+                },
+                logs: [],
+                settings: {
+                    gatewayUsername: '',
+                    gatewayPassword: '',
+                    intervalSeconds: 60,
+                    internetCheckHost: '8.8.8.8',
+                    forceOffline: false,
+                    offlineOnlyMode: false
+                },
+                saveStatus: null,
+                purgeStatus: null,
+                gatewayPurgeStatus: null,
+                refreshInterval: null,
+
+                async init() {
+                    const token = localStorage.getItem('auth_token');
+                    if (token) {
+                        this.authenticated = true;
+                        this.startRefresh();
+                    }
+                },
+
+                async login() {
+                    this.loginError = '';
+                    try {
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.loginForm)
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            localStorage.setItem('auth_token', data.token);
+                            this.authenticated = true;
+                            this.startRefresh();
+                        } else {
+                            this.loginError = 'Identifiants incorrects';
+                        }
+                    } catch (e) {
+                        this.loginError = 'Erreur de connexion au serveur';
+                    }
+                },
+
+                logout() {
+                    localStorage.removeItem('auth_token');
+                    this.authenticated = false;
+                    if (this.refreshInterval) {
+                        clearInterval(this.refreshInterval);
+                    }
+                    this.refreshInterval = null;
+                },
+
+                startRefresh() {
+                    if (!this.authenticated) {
+                        return;
+                    }
+                    this.refreshData();
+                    this.refreshLogs();
+                    this.refreshInterval = setInterval(() => {
+                        if (!this.authenticated) {
+                            return;
+                        }
+                        this.refreshData();
+                        if (this.activeTab === 'logs') {
+                            this.refreshLogs();
+                        }
+                    }, 5000);
+                },
+
+                setActiveTab(tab) {
+                    this.activeTab = tab;
+                    if (tab === 'settings') {
+                        this.loadSettings();
+                    }
+                    if (tab === 'logs') {
+                        this.refreshLogs();
+                    }
+                    if (tab === 'dashboard') {
+                        this.refreshData();
+                    }
+                },
+
+                handleAuthFailure(message) {
+                    this.loginError = message || 'Session expirée, veuillez vous reconnecter.';
+                    this.logout();
+                },
+
+                async fetchWithAuth(url, options = {}) {
+                    const token = localStorage.getItem('auth_token');
+                    if (!token) {
+                        this.handleAuthFailure('Authentification requise. Connectez-vous.');
+                        return null;
+                    }
+
+                    const headers = {
+                        ...(options.headers || {}),
+                        'Authorization': 'Bearer ' + token
+                    };
+
+                    const response = await fetch(url, { ...options, headers });
+
+                    if (response.status === 401) {
+                        this.handleAuthFailure('Session expirée, veuillez vous reconnecter.');
+                        return null;
+                    }
+
+                    return response;
+                },
+
+                async refreshData() {
+                    if (!this.authenticated) return;
+                    try {
+                        const response = await this.fetchWithAuth('/api/dashboard');
+                        if (!response) return;
+                        if (response.ok) {
+                            const payload = await response.json();
+                            this.data = {
+                                ...payload,
+                                internetAvailable: payload.internetAvailable,
+                                isForcedOffline: payload.isForcedOffline,
+                                isOfflineOnlyMode: payload.isOfflineOnlyMode
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Error refreshing data:', e);
+                    }
+                },
+
+                async refreshLogs() {
+                    if (!this.authenticated) return;
+                    try {
+                        const response = await this.fetchWithAuth('/api/logs');
+                        if (!response) return;
+                        if (response.ok) {
+                            this.logs = await response.json();
+                        }
+                    } catch (e) {
+                        console.error('Error refreshing logs:', e);
+                    }
+                },
+
+                async loadSettings() {
+                    if (!this.authenticated) return;
+                    try {
+                        const response = await this.fetchWithAuth('/api/settings');
+                        if (!response) return;
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.settings = {
+                                gatewayUsername: data.gatewayUsername || '',
+                                gatewayPassword: data.gatewayPassword || '',
+                                intervalSeconds: data.intervalSeconds || 60,
+                                internetCheckHost: data.internetCheckHost || '8.8.8.8',
+                                forceOffline: !!data.forceOffline,
+                                offlineOnlyMode: !!data.offlineOnlyMode
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Error loading settings:', e);
+                    }
+                },
+
+                async saveSettings() {
+                    if (!this.authenticated) return;
+                    this.saveStatus = null;
+                    try {
+                        const response = await this.fetchWithAuth('/api/settings', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                gatewayUsername: this.settings.gatewayUsername,
+                                gatewayPassword: this.settings.gatewayPassword,
+                                intervalSeconds: Number(this.settings.intervalSeconds),
+                                internetCheckHost: this.settings.internetCheckHost,
+                                forceOffline: !!this.settings.forceOffline,
+                                offlineOnlyMode: !!this.settings.offlineOnlyMode
+                            })
+                        });
+                        if (!response) return;
+
+                        if (response.ok) {
+                            this.saveStatus = 'success';
+                            this.loadSettings();
+                        } else {
+                            this.saveStatus = 'error';
+                        }
+
+                        setTimeout(() => this.saveStatus = null, 3000);
+                    } catch (e) {
+                        this.saveStatus = 'error';
+                        setTimeout(() => this.saveStatus = null, 3000);
+                    }
+                },
+
+                async purgeLocalData() {
+                    if (!this.authenticated) return;
+                    this.purgeStatus = null;
+                    try {
+                        const response = await this.fetchWithAuth('/api/sync/purge', {
+                            method: 'POST'
+                        });
+                        if (!response) return;
+
+                        if (response.ok) {
+                            this.purgeStatus = 'success';
+                            this.refreshData();
+                        } else {
+                            this.purgeStatus = 'error';
+                        }
+
+                        setTimeout(() => this.purgeStatus = null, 3000);
+                    } catch (e) {
+                        this.purgeStatus = 'error';
+                        setTimeout(() => this.purgeStatus = null, 3000);
+                    }
+                },
+
+                async purgeGatewayData() {
+                    if (!this.authenticated) return;
+                    this.gatewayPurgeStatus = null;
+                    try {
+                        const response = await this.fetchWithAuth('/api/gateway/purge', {
+                            method: 'POST'
+                        });
+                        if (!response) return;
+
+                        if (response.ok) {
+                            this.gatewayPurgeStatus = 'success';
+                            this.refreshData();
+                        } else {
+                            this.gatewayPurgeStatus = 'error';
+                        }
+
+                        setTimeout(() => this.gatewayPurgeStatus = null, 3000);
+                    } catch (e) {
+                        this.gatewayPurgeStatus = 'error';
+                        setTimeout(() => this.gatewayPurgeStatus = null, 3000);
+                    }
+                },
+
+                formatDateTime(dateStr) {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('fr-FR');
+                },
+
+                formatTime(dateStr) {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleTimeString('fr-FR');
+                },
+
+                formatUptime(uptime) {
+                    if (!uptime) return '-';
+                    const parts = uptime.split(':');
+                    if (parts.length >= 3) {
+                        const hours = parseInt(parts[0]);
+                        const minutes = parseInt(parts[1]);
+                        const days = Math.floor(hours / 24);
+                        const remainingHours = hours % 24;
+                        
+                        if (days > 0) {
+                            return `${days}j ${remainingHours}h ${minutes}m`;
+                        }
+                        return `${hours}h ${minutes}m`;
+                    }
+                    return uptime;
+                },
+
+                getLogLevelClass(level) {
+                    const base = 'border px-2 py-0.5 rounded text-xs font-semibold uppercase shadow-sm';
+                    const classes = {
+                        'INF': `${base} border-emerald-400/40 bg-emerald-500/15 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.25)]`,
+                        'WRN': `${base} border-amber-400/50 bg-amber-500/20 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.3)]`,
+                        'ERR': `${base} border-rose-500/40 bg-rose-600/20 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.35)]`,
+                        'DBG': `${base} border-slate-400/40 bg-slate-500/20 text-slate-200 shadow-[0_0_10px_rgba(148,163,184,0.25)]`
+                    };
+                    return classes[level] || `${base} border-slate-400/30 bg-slate-500/20 text-slate-200`;
+                }
+            };
+        }
+    </script>
+</body>
+</html>

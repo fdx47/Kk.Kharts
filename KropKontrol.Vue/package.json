@@ -1,0 +1,37 @@
+{
+  "name": "kropkontrol",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode production && node generate-htaccess.js",
+    "build:devftp": "vite build --mode devftp && node generate-htaccess.js",
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "apexcharts": "^5.3.0",
+    "axios": "^1.9.0",
+    "bootstrap": "^5.3.6",
+    "bootstrap-icons": "^1.13.1",
+    "dotenv": "^16.5.0",
+    "idb": "^8.0.3",
+    "inject": "^1.0.0beta2",
+    "interactjs": "^1.10.27",
+    "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
+    "luxon": "^3.6.1",
+    "pdfjs-dist": "^5.1.91",
+    "suncalc": "^1.9.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.1",
+    "vue3-toastify": "^0.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "prettier": "^3.6.2",
+    "vite": "^6.3.5"
+  }
+}

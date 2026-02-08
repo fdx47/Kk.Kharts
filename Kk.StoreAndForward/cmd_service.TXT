@@ -1,0 +1,29 @@
+===============================================================================================
+=== Ce script doit être exécuté dans PowerShell avec un niveau de privilèges administrateur === 
+===                                                                                         === 
+===                                    WIN + X                                              === 
+===============================================================================================
+
+New-Service -Name "Kk.StoreAndForward" -BinaryPathName "C:\KropKontrol\Kk.StoreAndForward\Kk.StoreAndForward.exe" -Description "KropKontrol Store And Forward" -DisplayName "Kk.StoreAndForward"
+
+
+
+Start-Service -Name "Kk.StoreAndForward"
+
+
+
+
+
+Get-Service -Name *Nom*
+
+
+Get-Service -Name *Kk.StoreAndForward*
+
+
+
+
+sc.exe delete "Kk.StoreAndForward"
+
+
+Remove-Service-Name "Kk.StoreAndForward"
+

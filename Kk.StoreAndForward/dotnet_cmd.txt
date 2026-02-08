@@ -1,0 +1,3 @@
+Compilar para produção.
+
+dotnet publish -c Release -o .\publish_KK.UG6x.StoreAndForward

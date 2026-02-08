@@ -1,0 +1,605 @@
+
+// Variáveis CSS - Tema Índigo
+:root {
+  --kk-primary: #6366f1; // Índigo (principal)
+  --kk-secondary: #0ea5e9; // Cyan (secundário vibrante)
+  --kk-accent: #8b5cf6; // Violeta (accent)
+  --kk-warning: #f59e0b; // Âmbar (avisos)
+  --kk-danger: #ef4444; // Vermelho (perigo)
+  --kk-success: #10b981; // Esmeralda (sucesso)
+  --kk-info: #0ea5e9; // Cyan (info)
+
+  // Paleta neutra moderna
+  --tg-bg: #f8fafc;
+  --tg-text: #0f172a;
+  --tg-hint: #64748b;
+  --tg-link: #6366f1;
+  --tg-button: #6366f1;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #ffffff;
+  --tg-border: #e2e8f0;
+
+  // Cores do modo escuro
+  --kk-dark: #0f172a;
+  --kk-darker: #020617;
+
+  --kk-card-radius: 20px;
+  --kk-button-radius: 14px;
+  --kk-input-radius: 12px;
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+// Tipografia
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--tg-bg);
+  color: var(--tg-text);
+}
+
+// Modo claro (padrão)
+.body--light {
+  background: var(--tg-bg);
+  color: var(--tg-text);
+}
+
+// Degradês do modo escuro
+.body--dark {
+  --tg-bg: #1C1C1E;
+  --tg-text: #ffffff;
+  --tg-hint: #8e8e93;
+  --tg-secondary-bg: #2c2c2e;
+
+  background: linear-gradient(180deg, var(--kk-dark) 0%, var(--kk-darker) 100%);
+  min-height: 100vh;
+}
+
+// Estilo premium de cartão - inspirado no Telegram
+.kk-card {
+  background: var(--tg-secondary-bg);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--kk-card-radius);
+  padding: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &--elevated {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &--gradient {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+  }
+}
+
+.body--dark .kk-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+// Cartões de métricas
+.kk-metric-card {
+  @extend .kk-card;
+  text-align: center;
+
+  .metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+
+    &--primary {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--kk-primary);
+    }
+
+    &--secondary {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--kk-secondary);
+    }
+
+    &--accent {
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--kk-accent);
+    }
+
+    &--warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--kk-warning);
+    }
+
+    &--danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--kk-danger);
+    }
+  }
+
+  .metric-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .metric-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.6;
+  }
+
+  .metric-unit {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+}
+
+// Selos de status
+.kk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &--online {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--kk-primary);
+  }
+
+  &--offline {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--kk-danger);
+  }
+
+  &--warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--kk-warning);
+  }
+
+  .badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// Botões
+.kk-btn {
+  border-radius: var(--kk-button-radius);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 12px 24px;
+  transition: all 0.2s ease;
+
+  &--primary {
+    background: linear-gradient(135deg, var(--kk-primary) 0%, #16a34a 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+
+    &:active {
+      transform: scale(0.96);
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+    }
+  }
+
+  &--secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--kk-primary);
+  }
+}
+
+// Botões de ação rápida
+.kk-quick-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--kk-card-radius);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .action-label {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.8;
+  }
+}
+
+// Placeholders esqueléticos
+.kk-skeleton {
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.05) 25%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+
+  &--card {
+    height: 120px;
+    border-radius: var(--kk-card-radius);
+  }
+
+  &--text {
+    height: 16px;
+    width: 60%;
+  }
+
+  &--circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Layout das páginas
+.kk-page {
+  min-height: 100vh;
+  padding: 16px;
+  padding-top: calc(12px + var(--safe-area-inset-top));
+  padding-bottom: calc(100px + var(--safe-area-inset-bottom));
+  background: var(--tg-bg);
+  color: var(--tg-text);
+
+  &__header {
+    margin-bottom: 16px;
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      color: var(--tg-text);
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--tg-hint);
+    }
+  }
+
+  &__section {
+    margin-bottom: 16px;
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--tg-hint);
+      margin-bottom: 12px;
+    }
+  }
+}
+
+.body--dark .kk-page {
+  background: transparent;
+}
+
+// Navegação inferior
+.kk-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--tg-bg);
+  border-top: 1px solid var(--tg-border);
+  padding-bottom: var(--safe-area-inset-bottom);
+  z-index: 100;
+
+  .nav-items {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    color: var(--tg-hint);
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &.active {
+      color: var(--tg-button);
+    }
+
+    .nav-icon {
+      font-size: 24px;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 600;
+    }
+  }
+}
+
+.body--dark .kk-bottom-nav {
+  background: rgba(28, 28, 30, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+// Gesto de puxar para atualizar
+.q-pull-to-refresh {
+  .q-pull-to-refresh__puller {
+    color: var(--kk-primary);
+  }
+}
+
+// Gráficos
+.kk-chart-container {
+  background: var(--tg-secondary-bg);
+  border-radius: var(--kk-card-radius);
+  padding: 8px;
+
+  &--fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    background: var(--kk-darker);
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// Linha do tempo de alertas
+.kk-alert-item {
+  @extend .kk-card;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  .alert-indicator {
+    width: 4px;
+    border-radius: 2px;
+    flex-shrink: 0;
+
+    &--critical {
+      background: var(--kk-danger);
+    }
+
+    &--warning {
+      background: var(--kk-warning);
+    }
+
+    &--info {
+      background: var(--kk-secondary);
+    }
+  }
+
+  .alert-content {
+    flex: 1;
+
+    .alert-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .alert-message {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+
+    .alert-time {
+      font-size: 12px;
+      opacity: 0.5;
+    }
+  }
+
+  .alert-actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+// Ações por gesto lateral
+.kk-swipe-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  font-weight: 600;
+  font-size: 14px;
+
+  &--acknowledge {
+    background: var(--kk-primary);
+    color: white;
+  }
+
+  &--mute {
+    background: var(--kk-warning);
+    color: white;
+  }
+
+  &--delete {
+    background: var(--kk-danger);
+    color: white;
+  }
+}
+
+// Modal / bottom sheet
+.kk-modal {
+  .q-dialog__inner {
+    padding: 0;
+  }
+
+  &__content {
+    background: var(--kk-dark);
+    border-radius: var(--kk-card-radius) var(--kk-card-radius) 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+  }
+
+  &__body {
+    padding: 20px;
+  }
+
+  &__footer {
+    padding: 16px 20px;
+    padding-bottom: calc(16px + var(--safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+// Campos de formulário
+.kk-input {
+  .q-field__control {
+    background: #ffffff;
+    border-radius: var(--kk-input-radius);
+    border: 1px solid var(--tg-border);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:before,
+    &:after {
+      display: none;
+    }
+  }
+
+  &.q-field--focused .q-field__control {
+    border-color: var(--tg-button);
+    box-shadow: 0 8px 24px rgba(36, 129, 204, 0.18);
+  }
+
+  .q-field__label {
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  .q-field__native {
+    color: var(--tg-text);
+  }
+}
+
+.kk-btn {
+  border-radius: var(--kk-button-radius);
+  font-weight: 600;
+
+  .q-field__native,
+  .q-field__prefix,
+  .q-field__suffix {
+    color: white;
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+// Transições
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+// Utilidades
+.text-gradient {
+  background: linear-gradient(135deg, var(--kk-primary) 0%, var(--kk-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Kk.Kharts.Maui.ViewModels"
+             xmlns:models="clr-namespace:Kk.Kharts.Maui.Models"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui"
+             x:Class="Kk.Kharts.Maui.Views.ChartPage"
+             x:DataType="vm:ChartViewModel"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False"
+             Background="{StaticResource ModernBackgroundBrush}">
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding GoBackCommand}" />
+    </Shell.BackButtonBehavior>
+
+    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="16">
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Style="{StaticResource CardView}"
+                Padding="12"
+                BackgroundColor="#CCFFFFFF">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+                <Grid Grid.Column="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                    <Button Grid.Column="0"
+                            Text="◀"
+                            Command="{Binding PreviousDeviceCommand}"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="18"
+                            Padding="0"
+                            WidthRequest="30"
+                            HeightRequest="44"
+                            VerticalOptions="Center" />
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                        <Label Text="{Binding Name}" Style="{StaticResource CardTitle}" HorizontalOptions="Center" />
+                        <Label Text="{Binding Device.CompanyName}" Style="{StaticResource CardSubtitle}" LineBreakMode="TailTruncation" HorizontalOptions="Center" />
+                        <Label Text="{Binding InstallationLocation}" Style="{StaticResource Caption}" LineBreakMode="TailTruncation" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="2"
+                            Text="▶"
+                            Command="{Binding NextDeviceCommand}"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="18"
+                            Padding="0"
+                            WidthRequest="30"
+                            HeightRequest="44"
+                            VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Tabs in Header -->
+                <Border Grid.Column="1" 
+                        Stroke="{StaticResource Primary}" 
+                        StrokeThickness="1" 
+                        StrokeShape="RoundRectangle 8" 
+                        Padding="0"
+                        HeightRequest="36"
+                        VerticalOptions="Center">
+                    <Grid ColumnDefinitions="*,*">
+                        <Button Grid.Column="0"
+                                Text="Graphique"
+                                Command="{Binding SetConfigVisibilityCommand}"
+                                CommandParameter="{x:Boolean False}"
+                                Padding="12,0"
+                                FontSize="12"
+                                CornerRadius="0"
+                                HeightRequest="36">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsConfigVisible}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsConfigVisible}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="Transparent" />
+                                    <Setter Property="TextColor" Value="{StaticResource Primary}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1"
+                                Text="Config"
+                                Command="{Binding SetConfigVisibilityCommand}"
+                                CommandParameter="{x:Boolean True}"
+                                Padding="12,0"
+                                FontSize="12"
+                                CornerRadius="0"
+                                HeightRequest="36">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsConfigVisible}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsConfigVisible}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="Transparent" />
+                                    <Setter Property="TextColor" Value="{StaticResource Primary}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <HorizontalStackLayout Grid.Column="2" Spacing="8">
+                    <Button Text="24h" Command="{Binding SetDateRangeCommand}" CommandParameter="1" Style="{StaticResource ChipButton}" WidthRequest="50" />
+                    <Button Text="3j" Command="{Binding SetDateRangeCommand}" CommandParameter="3" Style="{StaticResource ChipButton}" WidthRequest="50" />
+                    <Button Text="7j" Command="{Binding SetDateRangeCommand}" CommandParameter="7" Style="{StaticResource ChipButton}" WidthRequest="50" />
+                    <Button Text="30j" Command="{Binding SetDateRangeCommand}" CommandParameter="30" Style="{StaticResource ChipButton}" WidthRequest="50" />
+                </HorizontalStackLayout>
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <Grid Grid.Row="1" RowDefinitions="*" RowSpacing="0">
+            <!-- Panels -->
+            <Grid Grid.Row="0">
+                <!-- Chart panel -->
+                <Grid IsVisible="{Binding IsConfigVisible, Converter={StaticResource InvertedBoolConverter}}"
+                      RowDefinitions="Auto,*" Padding="16" RowSpacing="16">
+
+
+                    <Border Grid.Row="1" Style="{StaticResource CardView}" Padding="16">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <!-- Previous Button -->
+                            <Button Grid.Column="0" 
+                                    Text="◀️" 
+                                    Command="{Binding PreviousPeriodCommand}"
+                                    Style="{StaticResource GhostButton}"
+                                    VerticalOptions="Center"
+                                    WidthRequest="30"
+                                    HeightRequest="60"
+                                    Padding="0" />
+
+                            <Grid Grid.Column="1">
+                                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <lvc:CartesianChart Series="{Binding Series}" 
+                                                    XAxes="{Binding XAxes}" 
+                                                    YAxes="{Binding YAxes}" 
+                                                    ZoomMode="X" 
+                                                    TooltipPosition="Top" 
+                                                    IsVisible="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}" />
+                                <Border IsVisible="{Binding HasError}" BackgroundColor="#33FF1744" Stroke="{StaticResource Error}" StrokeShape="RoundRectangle 8" Padding="16" HorizontalOptions="Center" VerticalOptions="Center">
+                                    <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Error}" FontSize="14" HorizontalOptions="Center" />
+                                </Border>
+                            </Grid>
+
+                            <!-- Next Button -->
+                            <Button Grid.Column="2" 
+                                    Text="▶️" 
+                                    Command="{Binding NextPeriodCommand}"
+                                    Style="{StaticResource GhostButton}"
+                                    VerticalOptions="Center"
+                                    WidthRequest="30"
+                                    HeightRequest="60"
+                                    Padding="0" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Config panel -->
+                <ScrollView IsVisible="{Binding IsConfigVisible}" Padding="16">
+                    <VerticalStackLayout Spacing="20">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Courbes visibles" Style="{StaticResource CardTitle}" />
+                            <Label Text="Cochez les variables à afficher sur le graphique." Style="{StaticResource CardSubtitle}" />
+                        </VerticalStackLayout>
+
+                        <CollectionView ItemsSource="{Binding VariableOptions}" SelectionMode="None">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Vertical" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:ChartVariableOption">
+                                    <Border Style="{StaticResource ChipContainer}" Margin="0,4" Padding="12">
+                                        <VerticalStackLayout Spacing="8">
+                                            <!-- Header Row -->
+                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                                <!-- Color Picker -->
+                                                <Border Grid.Column="0" 
+                                                        WidthRequest="24" 
+                                                        HeightRequest="24" 
+                                                        StrokeShape="RoundRectangle 12"
+                                                        BackgroundColor="{Binding AccentColor}"
+                                                        StrokeThickness="0"
+                                                        VerticalOptions="Center">
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ChartViewModel}}, Path=ToggleColorPaletteCommand}" CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+                                                </Border>
+                                                
+                                                <!-- Visibility Checkbox -->
+                                                <CheckBox Grid.Column="1" IsChecked="{Binding IsVisible, Mode=TwoWay}" Color="{StaticResource Primary}" VerticalOptions="Center" Margin="0" />
+                                                
+                                                <!-- Label -->
+                                                <Label Grid.Column="2" Text="{Binding Label}" VerticalOptions="Center" TextColor="{StaticResource TextPrimary}" LineBreakMode="TailTruncation" />
+                                            </Grid>
+
+                                            <!-- Color Palette (Visible if IsColorPaletteVisible) -->
+                                            <HorizontalStackLayout IsVisible="{Binding IsColorPaletteVisible}" Spacing="8">
+                                                <CollectionView ItemsSource="{Binding Source={RelativeSource AncestorType={x:Type vm:ChartViewModel}}, Path=AvailableColors}" 
+                                                                HeightRequest="40"
+                                                                WidthRequest="550">
+                                                    <CollectionView.ItemsLayout>
+                                                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                                                    </CollectionView.ItemsLayout>
+                                                    <CollectionView.ItemTemplate>
+                                                        <DataTemplate x:DataType="Color">
+                                                            <Border WidthRequest="32" HeightRequest="32" StrokeShape="RoundRectangle 16" BackgroundColor="{Binding .}" StrokeThickness="0">
+                                                                <Border.GestureRecognizers>
+                                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ChartViewModel}}, Path=SetColorCommand}">
+                                                                        <TapGestureRecognizer.CommandParameter>
+                                                                            <MultiBinding Converter="{StaticResource SetColorConverter}">
+                                                                                <Binding Source="{RelativeSource AncestorType={x:Type models:ChartVariableOption}}" />
+                                                                                <Binding Path="." />
+                                                                            </MultiBinding>
+                                                                        </TapGestureRecognizer.CommandParameter>
+                                                                    </TapGestureRecognizer>
+                                                                </Border.GestureRecognizers>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </CollectionView.ItemTemplate>
+                                                </CollectionView>
+
+                                                <!-- Custom Color Button -->
+                                                <Border WidthRequest="32" 
+                                                        HeightRequest="32" 
+                                                        StrokeShape="RoundRectangle 16" 
+                                                        BackgroundColor="{StaticResource SurfaceLight}"
+                                                        Stroke="{StaticResource Primary}"
+                                                        StrokeThickness="2">
+                                                    <Label Text="+" 
+                                                           FontSize="20" 
+                                                           TextColor="{StaticResource Primary}" 
+                                                           HorizontalOptions="Center" 
+                                                           VerticalOptions="Center"
+                                                           FontFamily="PoppinsBold" />
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ChartViewModel}}, Path=OpenCustomColorPickerCommand}" 
+                                                                              CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+                                                </Border>
+                                            </HorizontalStackLayout>
+
+                                            <!-- Config Row (Visible if checked) -->
+                                            <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8" IsVisible="{Binding IsVisible}">
+                                                <Label Grid.Column="0" Text="Min" VerticalOptions="Center" FontSize="12" TextColor="{StaticResource TextSecondary}" />
+                                                <Entry Grid.Column="1" Text="{Binding Min, Mode=TwoWay}" Placeholder="Auto" FontSize="12" HeightRequest="36" Keyboard="Numeric" BackgroundColor="{StaticResource SurfaceLight}" />
+                                                
+                                                <Label Grid.Column="2" Text="Max" VerticalOptions="Center" FontSize="12" TextColor="{StaticResource TextSecondary}" />
+                                                <Entry Grid.Column="3" Text="{Binding Max, Mode=TwoWay}" Placeholder="Auto" FontSize="12" HeightRequest="36" Keyboard="Numeric" BackgroundColor="{StaticResource SurfaceLight}" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
+        </Grid>
+
+    </Grid>
+</ContentPage>

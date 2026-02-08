@@ -1,0 +1,81 @@
+﻿@page "/chart"
+@inject ApiService ApiService
+@inject HttpClient Http
+@using Kk.Kharts.Client.Models
+@using Plotly.Blazor
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces
+@using Plotly.Blazor.Traces.ScatterLib
+@using MudBlazor
+
+
+<div class="d-flex gap-1 justify-end">
+
+   @*  <ApexChart TItem="SensorData"
+               Title="Sensor Data Over Time">
+
+        <!-- Exibindo a temperatura do solo ao longo do tempo -->
+        <ApexPointSeries TItem="SensorData"
+                         Items="SensorDataList"
+                         Name="Soil Temperature"
+                         SeriesType="SeriesType.Line"
+                         XValue="@(e => e.Timestamp)" 
+                         YAggregate="data => data.Average(e => e.SoilTemperature)" 
+                         OrderBy="Timestamp" />
+
+        <!-- Exibindo ECb ao longo do tempo -->
+        <ApexPointSeries TItem="SensorData"
+                         Items="SensorDataList"
+                         Name="ECb"
+                         SeriesType="SeriesType.Line"
+                         XValue="@(e => e.Timestamp)"
+                         YAggregate="data => data.Average(e => e.ECb)"
+                         OrderBy="Timestamp" />
+
+    </ApexChart> *@
+
+</div>
+
+
+
+@code {
+
+
+    private List<SensorData> Orders { get; set; } = new();
+
+    private async Task LoadDataFromApi()
+    {
+        string devEui = "24E124454E048465";
+        string startDate = "2025-04-06 10:45:13";
+        string endDate = "2025-04-11 10:45:13";
+
+        // Chamada à API
+        var sensorData = await ApiService.GetSensorDataAsync(devEui, startDate, endDate);
+
+        // Verifica se há dados
+        if (sensorData == null || !sensorData.Any())
+        {
+            Console.WriteLine("Aucune donnée reçue.");
+            return;
+        }
+
+        Console.WriteLine($"Nombre d'enregistrements reçus : {sensorData.Count}");
+
+        // Mapeia os dados para uma lista de Order (exemplo de estrutura abaixo)
+        Orders = sensorData.Select(d => new SensorData
+            {
+                Timestamp = d.Timestamp,
+                CoirVWC = d.CoirVWC,
+                SoilTemperature = d.SoilTemperature,
+                Battery = d.Battery
+            }).ToList();
+
+        // Apenas para debug
+        foreach (var order in Orders)
+        {
+            // Console.WriteLine($"Order: {order.Timestamp}, CoirVWC: {order.CoirVWC}, Temp: {order.Temperature}, Battery: {order.Battery}");
+        }
+
+        StateHasChanged(); // Atualiza o UI
+    }
+}

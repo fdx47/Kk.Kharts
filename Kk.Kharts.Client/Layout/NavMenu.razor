@@ -1,0 +1,18 @@
+﻿﻿﻿<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.Home">Home</MudNavLink>
+
+    <MudNavLink Href="/em300th" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.Add">Temperature</MudNavLink>
+    <MudNavLink Href="/wet150" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.AccountBalance">VWC</MudNavLink>
+    <MudDivider />   
+</MudNavMenu>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

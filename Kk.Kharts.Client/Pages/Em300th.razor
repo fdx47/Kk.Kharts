@@ -1,0 +1,166 @@
+﻿@page "/em300th"
+@using ApexCharts
+@using Kk.Kharts.Shared.Entities
+@using Kk.Kharts.Shared.Entities.Em300
+@using MudBlazor
+@inject HttpClient Http
+
+<MudCard Class="pa-4">
+    <MudCardHeader>
+        <MudText Typo="Typo.h5">Gráfico de Temperatura do Sensor EM300-TH</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect Label="Nom du capteur" @bind-Value="DevEui" T="string">
+                    @foreach (var device in Devices)
+                    {
+                        <MudSelectItem Value="@device.DevEui">@device.DevEui</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField Label="Device EUI" @bind-Value="DevEui" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="Data Início" Date="@StartDate" DateChanged="OnStartDateChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="Data Fim" Date="@EndDate" DateChanged="OnEndDateChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Color="MudBlazor.Color.Primary" OnClick="LoadData" StartIcon="@Icons.Material.Filled.Search">Buscar</MudButton>
+            </MudItem>
+        </MudGrid>
+
+        <MudProgressLinear Indeterminate="true" Color="MudBlazor.Color.Primary" Style="margin-top:10px;" Visible="IsLoading" />
+
+        @code {
+
+        }
+
+        @if (Data == null || !Data.Any())
+        {
+            <MudAlert Severity="Severity.Warning">Nenhum dado encontrado.</MudAlert>
+        }
+        else
+        {
+            <MudCardHeader>
+                <MudText Typo="Typo.h5">
+                    @* Temperatura - @Data.FirstOrDefault()?.DeviceName *@
+                </MudText>
+            </MudCardHeader>
+
+            <ApexChart TItem="Em300Th" Title="Dados do Sensor" Height="600">
+                <ApexPointSeries TItem="Em300Th"
+                                 Items="Data"
+                                 Name="@chartTitle"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="e => e.Timestamp"
+                                 YValue="e => (decimal)e.Temperature" />
+            </ApexChart>
+        }
+
+    </MudCardContent>
+</MudCard>
+
+@code {
+
+     private string chartTitle => $"Temperatura FDXXXXX";
+    // private string chartTitle => $"Temperatura FDXXXXX - {Data.FirstOrDefault()?.DeviceName}";
+    // private List<Em300Th> Data { get; set; } = new();
+    private List<Em300Th> Data { get; set; } = new();
+    private string DevEui { get; set; } = "24E124136E318864";
+    private DateTime StartDate { get; set; } = DateTime.Today.AddDays(-7);
+    private DateTime EndDate { get; set; } = DateTime.Today;
+    private bool IsLoading { get; set; } = false;
+
+    // private string DevEui { get; set; }
+    private List<Device> Devices { get; set; } = new List<Device>();
+
+    // private async Task LoadData()
+    // {
+    //     if (string.IsNullOrWhiteSpace(DevEui))
+    //     {
+    //         return;
+    //     }
+
+    //     IsLoading = true;
+
+    //     try
+    //     {
+    //         string url = $"https://localhost:7083/api/Em300Th/DeviceByDevEui?DevEui={DevEui}&StartDate={StartDate:yyyy-MM-ddTHH:mm:ss}&EndDate={EndDate:yyyy-MM-ddTHH:mm:ss}";
+    //         Data = await Http.GetFromJsonAsync<List<Em300Th>>(url) ?? new List<Em300Th>();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Erro ao carregar os dados: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         IsLoading = false;
+    //         StateHasChanged(); // FORÇAR ATUALIZAÇÃO DA UI
+    //     }
+    // }
+
+
+
+    private async Task LoadData()
+    {
+        if (string.IsNullOrWhiteSpace(DevEui))
+        {
+            return;
+        }
+
+        IsLoading = true;
+
+        try
+        {
+            string url = $"https://localhost:7083/api/Em300Th/DeviceByDevEui?DevEui={DevEui}&StartDate={StartDate:yyyy-MM-ddTHH:mm:ss}&EndDate={EndDate:yyyy-MM-ddTHH:mm:ss}";
+            Data = await Http.GetFromJsonAsync<List<Em300Th>>(url) ?? new List<Em300Th>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar os dados: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged(); // FORÇAR ATUALIZAÇÃO DA UI
+        }
+    }
+
+
+
+
+    private void OnStartDateChanged(DateTime? date)
+    {
+        if (date.HasValue)
+            StartDate = date.Value;
+    }
+
+
+    private void OnEndDateChanged(DateTime? date)
+    {
+        if (date.HasValue)
+            EndDate = date.Value;
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Chama a API para obter os dispositivos
+        Devices = await Http.GetFromJsonAsync<List<Device>>("api/device/name");
+
+        await LoadData();
+        Console.WriteLine($"Dados carregados: {Data.Count} registros");
+        foreach (var item in Data)
+        {
+            Console.WriteLine($"Timestamp: {item.Timestamp}, Temp: {item.Temperature}");
+        }
+    }
+
+
+}

@@ -1,0 +1,124 @@
+﻿@page "/login"﻿
+
+<link href="css/background.css" rel="stylesheet" />
+
+<div class="register-background">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+        <MudPaper Class="pa-6 rounded-lg" Elevation="25">
+            <MudText Typo="Typo.h4" Class="text-center mb-6">Se connecter</MudText>
+            <MudTextField @bind-Value="login.Email" Label="Adresse e-mail" Variant="Variant.Outlined"
+                          FullWidth="true" Margin="Margin.Dense" Required="true"
+                         HelperText="Veuillez entrer votre adresse e-mail." />
+
+          <MudTextField @bind-Value="login.Password" Label="Mot de passe" Variant="Variant.Outlined"
+                        FullWidth="true" Margin="Margin.Dense" InputType="@PasswordInput"
+                        Required="true" HelperText="Veuillez entrer votre mot de passe."
+                        Class="mt-4" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon"
+                        OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Show Password" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-6 w-100"
+            OnClick="HandleLogin">Se connecter</MudButton>
+
+
+           <MudText Class="text-center mt-4">
+              Vous n'avez pas de compte ? <MudLink Href="/register" Color="Color.Primary">Inscrivez-vous ici</MudLink>
+           </MudText>
+
+           <MudText Class="text-center mt-4">
+                Vous avez oublié votre mot de passe ? <MudLink Href="/resetPassword" Color="Color.Primary">Récupérez-le ici</MudLink>
+           </MudText>
+
+        </MudPaper>
+    </MudContainer>
+</div>
+
+@code {
+    private readonly LoginDTO login = new();
+    public string Password { get; set; } = string.Empty;
+
+    [Inject] private HttpClient HttpClient { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = null!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
+    [Inject] private ILoginService LoginService { get; set; } = null!;
+
+
+    private bool isShow;
+    private InputType PasswordInput = InputType.Password;
+    private string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override void OnInitialized()
+    {
+        Password = login.Password;
+    }
+
+    private async Task HandleLogin()
+    {
+        var url = "api/Auth/Login";
+        var result = await HttpClient.PostAsJsonAsync(url, login);
+
+        if (result.IsSuccessStatusCode)
+        {
+            var jsonResponse = await result.Content.ReadFromJsonAsync<JsonElement>();
+
+            if (jsonResponse.TryGetProperty("token", out var tokenProperty))
+            {
+                var token = tokenProperty.GetString();
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jwtToken = tokenHandler.ReadJwtToken(token);
+                var claims = jwtToken.Claims;
+
+                var uniqueNameClaim = claims.FirstOrDefault(c => c.Type == "email_id")?.Value;
+                var roleClaim = claims.FirstOrDefault(c => c.Type == "role")?.Value;               
+                var nameClaim = claims.FirstOrDefault(c => c.Type == "nom")?.Value;               
+
+                if (string.IsNullOrEmpty(uniqueNameClaim) || string.IsNullOrEmpty(roleClaim))
+                {
+                    throw new Exception("Il manque des claims dans le token.");
+                }
+
+                var newClaims = new List<Claim>
+                    {
+                        new(ClaimTypes.Name, uniqueNameClaim),
+                        new(ClaimTypes.Role, roleClaim),                        
+                        new("nom", nameClaim!)
+                    };
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    await LoginService.Login(token);
+                    Snackbar.Add($"Bienvenue {login.Email}", Severity.Success);
+                    NavigationManager.NavigateTo("/");
+                }
+                else
+                {
+                   Snackbar.Add("Le token est vide ou invalide.", Severity.Error);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Le token n'a pas été trouvé dans la réponse.", Severity.Error);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Email ou mot de passe incorrect.", Severity.Error);
+        }
+    }
+
+    private void ButtonTestclick()
+    {
+        if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+}

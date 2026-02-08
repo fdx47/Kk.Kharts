@@ -1,0 +1,124 @@
+﻿@page "/register"
+
+<link href="css/background.css" rel="stylesheet" />
+
+<div class="register-background">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+        <MudPaper Class="pa-6 rounded-lg" Elevation="25">
+            <MudText Typo="Typo.h4" Class="text-center mb-6">Enregistrement de l'utilisateur</MudText>
+
+
+            <!--  Champ Nom -->
+            <MudTextField @bind-Value="usuario.Nom" Label="Nom" Variant="Variant.Outlined"
+                            FullWidth="true" Margin="Margin.Dense"
+                            Required="true" RequiredError="Champ obligatoire - Veuillez entrer votre nom."
+                            HelperText="Veuillez entrer votre nom." />
+
+          
+            <!-- Champ Email -->
+            <MudTextField @bind-Value="usuario.Email" Label="Adresse e-mail" Variant="Variant.Outlined" 
+                            FullWidth="true" Margin="Margin.Dense" InputType="InputType.Email"
+                            Required="true" RequiredError="Champ obligatoire - Veuillez entrer un e-mail valide."
+                            HelperText="Veuillez entrer un e-mail valide."
+                            Class="mt-4" />
+
+
+            <!-- Champ Mot de passe -->
+            <MudTextField @bind-Value="usuario.Password" Label="Mot de passe" Variant="Variant.Outlined"
+
+            FullWidth="true" Margin="Margin.Dense" InputType="@PasswordInput"
+                             Required="true" RequiredError="Champ obligatoire - Veuillez entrer un mot de passe sécurisé."
+                             HelperText="Veuillez entrer un mot de passe sécurisé."
+                             Class="mt-4" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon"
+                             OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Afficher le mot de passe" />
+
+
+            <!-- Champ Profil -->
+            <MudRadioGroup @bind-Value="SelectedOption">               
+                <MudRadio Value="@("Utilisateur")" Color="Color.Primary"> Utilisateur </MudRadio>
+                <MudRadio Value="@("Administrateur")" Color="Color.Primary"> Administrateur </MudRadio>
+                <MudRadio Value="@("Root")" Color="Color.Primary"> Root </MudRadio>
+            </MudRadioGroup>
+
+
+
+            <!-- Bouton S'inscrire -->
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-6 w-100"
+                       OnClick="HandleRegister"> S'inscrire </MudButton>
+
+            <!-- Lien pour se connecter -->
+            <MudText Class="text-center mt-4">
+                Vous avez déjà un compte ? <MudLink Href="/login" Color="Color.Primary"> Connectez-vous ici. </MudLink>
+            </MudText>
+        </MudPaper>
+    </MudContainer>
+</div>
+
+
+@code {
+    private User usuario = new User();
+    
+
+    public string Password { get; set; } = string.Empty;
+    private bool isShow;
+    private InputType PasswordInput = InputType.Password;
+    private string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    public string SelectedOption { get; set; } = "Utilisateur";
+
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Inject] private HttpClient HttpClient { get; set; } = null!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = null!;
+
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        Password = usuario.Password;
+    }
+
+
+    private async Task HandleRegister()
+    {
+        // Validar campos requeridos
+        if (string.IsNullOrWhiteSpace(usuario.Nom) ||
+            string.IsNullOrWhiteSpace(usuario.Email) ||
+            string.IsNullOrWhiteSpace(usuario.Password)
+            )
+        {
+            Snackbar.Add("Veuillez compléter tous les champs obligatoires.", Severity.Error);
+            return;
+        }
+
+
+        usuario.Role = SelectedOption;
+        var url = "api/users";
+        var response = await HttpClient.PostAsJsonAsync(url, usuario);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Enregistrement réussi.", Severity.Success);
+            NavigationManager.NavigateTo("/login");
+        }
+        else
+        {
+            Snackbar.Add("Erreur lors de l'enregistrement de l'utilisateur.", Severity.Error);
+        }
+    }
+
+    private void ButtonTestclick()
+    {
+        if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+}

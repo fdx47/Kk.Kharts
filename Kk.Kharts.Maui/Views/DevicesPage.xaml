@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Kk.Kharts.Maui.ViewModels"
+             xmlns:models="clr-namespace:Kk.Kharts.Maui.Models"
+             xmlns:behaviors="clr-namespace:Kk.Kharts.Maui.Behaviors"
+             x:Class="Kk.Kharts.Maui.Views.DevicesPage"
+             x:DataType="vm:DevicesViewModel"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header Background -->
+        <BoxView Grid.Row="0" HeightRequest="100" VerticalOptions="Start">
+            <BoxView.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="{StaticResource PrimaryDark}" Offset="0.0" />
+                    <GradientStop Color="{StaticResource Background}" Offset="1.0" />
+                </LinearGradientBrush>
+            </BoxView.Background>
+        </BoxView>
+
+        <!-- Search Bar -->
+        <Border Grid.Row="0" 
+                Margin="16,8" 
+                StrokeShape="RoundRectangle 8"
+                StrokeThickness="0"
+                BackgroundColor="{StaticResource Surface}">
+            <SearchBar 
+                Placeholder="Rechercher un kapteur..."
+                Text="{Binding SearchText}"
+                SearchCommand="{Binding LoadDevicesCommand}"
+                BackgroundColor="Transparent"
+                TextColor="{StaticResource TextPrimary}"
+                PlaceholderColor="{StaticResource TextSecondary}"
+                CancelButtonColor="{StaticResource Primary}" />
+        </Border>
+
+        <!-- Devices List -->
+        <RefreshView 
+            Grid.Row="1"
+            IsRefreshing="{Binding IsRefreshing}"
+            Command="{Binding RefreshCommand}"
+            RefreshColor="{StaticResource Primary}">
+            
+            <CollectionView 
+                ItemsSource="{Binding Devices}"
+                SelectionMode="Single"
+                SelectionChangedCommand="{Binding SelectDeviceCommand}"
+                SelectionChangedCommandParameter="{Binding SelectedItem, Source={RelativeSource Self}}"
+                Margin="16,8">
+                <CollectionView.Behaviors>
+                    <behaviors:MouseWheelScrollBehavior />
+                </CollectionView.Behaviors>
+                
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:DeviceModel">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem 
+                                        Text="Graphique"
+                                        BackgroundColor="{StaticResource Primary}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DevicesViewModel}}, Path=SelectDeviceCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Border Margin="0,0,0,12" Style="{StaticResource CardView}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                                    
+                                    <!-- Device Icon -->
+                                    <Border Grid.Column="0" 
+                                           BackgroundColor="{StaticResource SurfaceLight}"
+                                           StrokeShape="RoundRectangle 12"
+                                           StrokeThickness="0"
+                                           Padding="0"
+                                           HeightRequest="56"
+                                           WidthRequest="56">
+                                        <Label Text="📡" 
+                                               FontSize="24"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
+
+                                    <!-- Device Info -->
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="4">
+                                        <Label Text="{Binding Name}" 
+                                               Style="{StaticResource CardTitle}"
+                                               LineBreakMode="TailTruncation" />
+                                        
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Border BackgroundColor="{StaticResource SurfaceLight}" 
+                                                   StrokeShape="RoundRectangle 4"
+                                                   StrokeThickness="0"
+                                                   Padding="6,2">
+                                                <Label Text="{Binding DeviceTypeName}" 
+                                                       FontSize="10"
+                                                       TextColor="{StaticResource TextSecondary}" />
+                                            </Border>
+                                        </HorizontalStackLayout>
+
+                                        <Label Text="{Binding InstallationLocation}" 
+                                               Style="{StaticResource CardSubtitle}"
+                                               LineBreakMode="TailTruncation"
+                                               IsVisible="{Binding InstallationLocation, Converter={StaticResource StringNotEmptyConverter}}" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Status -->
+                                    <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="4" HorizontalOptions="End">
+                                        <HorizontalStackLayout Spacing="4">
+                                            <Label Text="🔋" FontSize="12" TextColor="{StaticResource TextPrimary}" />
+                                            <Label Text="{Binding BatteryDisplay}"
+                                                   FontSize="12"
+                                                   FontFamily="PoppinsSemiBold"
+                                                   TextColor="{Binding BatteryColor}" />
+                                        </HorizontalStackLayout>
+                                        
+                                        <Label Text="{Binding LastSendAt}"
+                                               FontSize="10"
+                                               TextColor="{StaticResource TextSecondary}"
+                                               HorizontalOptions="End" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="40" Spacing="16">
+                        <Label Text="🔍" FontSize="48" HorizontalOptions="Center" />
+                        <Label Text="Aucun kapteur trouvé" 
+                               FontSize="18"
+                               FontFamily="PoppinsSemiBold"
+                               TextColor="{StaticResource TextSecondary}"
+                               HorizontalOptions="Center" />
+                        <Label Text="Essayez de modifier votre recherche"
+                               FontSize="14"
+                               TextColor="{StaticResource TextDisabled}"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

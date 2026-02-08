@@ -1,0 +1,55 @@
+﻿@page "/cesar"
+
+@using System.Linq
+@using Kk.Kharts.Client.Models
+@using ApexCharts
+@using Kk.Kharts.Shared.Entities
+@using MudBlazor
+@inject HttpClient Http
+
+
+@* <ApexChart TItem="SensorData"
+           Title="Sensor Data Over Time">
+    <ApexPointSeries TItem="SensorData"
+                     Items="SensorDataList"
+                     Name="Soil Temperature"
+                     SeriesType="SeriesType.Line"
+                     XValue="@(e => e.Timestamp)"
+                     YAggregate="data => data.Average(e => e.SoilTemperature)"
+                     OrderBy="Timestamp" />
+
+    <ApexPointSeries TItem="SensorData"
+                     Items="SensorDataList"
+                     Name="ECb"
+                     SeriesType="SeriesType.Line"
+                     XValue="@(e => e.Timestamp)"
+                     YAggregate="data => data.Average(e => e.ECb)"
+                     OrderBy="Timestamp" />
+</ApexChart>
+ *@
+@code {
+    private List<SensorData> SensorDataList { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var start = DateTime.UtcNow.AddDays(-7).ToString("o");
+        var end = DateTime.UtcNow.ToString("o");
+        SensorDataList = await GetSensorDataAsync("SEU_DEV_EUI", start, end);
+    }
+
+    public async Task<List<SensorData>> GetSensorDataAsync(string devEui, string startDate, string endDate)
+    {
+        try
+        {
+            string url = $"api/v1/Uc502Wet150/GetByDevEui?devEui={devEui}&startDate={Uri.EscapeDataString(startDate)}&endDate={Uri.EscapeDataString(endDate)}";
+            var response = await Http.GetFromJsonAsync<SensorDataResponse>(url);
+            return response?.Data ?? new List<SensorData>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching sensor data: {ex.Message}");
+            return new List<SensorData>();
+        }
+    }
+}
+

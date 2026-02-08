@@ -1,0 +1,140 @@
+﻿@page "/em300thv1"
+@using ApexCharts
+@using Kk.Kharts.Shared.Entities
+@using Kk.Kharts.Shared.Entities.Em300
+@using MudBlazor
+@inject HttpClient Http
+
+<MudCard Class="pa-4">
+    <MudCardHeader>
+        <MudText Typo="Typo.h5">Graphique de température du capteur EM300-TH</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField Label="Device EUI" @bind-Value="DevEui" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="Date de début" Date="@StartDate" DateChanged="OnStartDateChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="Date de fin" Date="@EndDate" DateChanged="OnEndDateChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Color="MudBlazor.Color.Primary" OnClick="LoadData" StartIcon="@Icons.Material.Filled.Search">Buscar</MudButton>
+            </MudItem>
+        </MudGrid>
+
+        <MudProgressLinear Indeterminate="true" Color="MudBlazor.Color.Primary" Style="margin-top:10px;" Visible="IsLoading" />
+
+
+
+        @if (Data == null || !Data.Any())
+        {
+            <MudAlert Severity="Severity.Warning">Nenhum dado encontrado.</MudAlert>
+        }
+        else
+        {
+            <ApexChart TItem="Em300Th" Title="Dados do Sensor" Height="600">
+                <ApexPointSeries TItem="Em300Th"
+                                 Items="Data"
+                                 Name="Temperatura"                               
+                                 SeriesType="SeriesType.Line"
+                                 XValue="e => e.Timestamp"
+                                 YValue="e => (decimal)e.Temperature" />
+
+                <ApexPointSeries TItem="Em300Th"
+                                 Items="Data"
+                                 Name="Bate"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="e => e.Timestamp"
+                                 YValue="e => (decimal)e.Battery" />
+            </ApexChart>
+
+
+
+            <ApexChart TItem="Em300Th" Title="Dados do Sensor" Height="600">
+                <ApexPointSeries TItem="Em300Th"
+                                 Items="Data"
+                                 Name="Hr"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="e => e.Timestamp"
+                                 YValue="e => (decimal)e.Humidity" />
+
+                <ApexPointSeries TItem="Em300Th"
+                                 Items="Data"
+                                 Name="Bate"
+                                 SeriesType="SeriesType.Line"
+                                 XValue="e => e.Timestamp"
+                                 YValue="e => (decimal)e.Battery" />
+            </ApexChart>
+        }
+
+ 
+
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<Em300Th> Data { get; set; } = new();
+    private string DevEui { get; set; } = "24E124454E353875";
+    private DateTime StartDate { get; set; } = DateTime.Today.AddDays(-7);
+    private DateTime EndDate { get; set; } = DateTime.Now;
+    private bool IsLoading { get; set; } = false;
+
+
+    private async Task LoadData()
+    {
+        if (string.IsNullOrWhiteSpace(DevEui))
+        {
+            return;
+        }
+
+        IsLoading = true;
+
+        try
+        {
+            string url = $"https://kropkontrol.premiumasp.net/api/v1/Em300Th/DeviceByDevEui?DevEui={DevEui}&StartDate={StartDate:yyyy-MM-ddTHH:mm:ss}&EndDate={EndDate:yyyy-MM-ddTHH:mm:ss}";
+
+
+            Data = await Http.GetFromJsonAsync<List<Em300Th>>(url) ?? new List<Em300Th>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar os dados: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged(); // FORÇAR ATUALIZAÇÃO DA UI
+        }
+    }
+
+
+
+    private void OnStartDateChanged(DateTime? date)
+    {
+        if (date.HasValue)
+            StartDate = date.Value;
+    }
+
+
+    private void OnEndDateChanged(DateTime? date)
+    {
+        if (date.HasValue)
+            EndDate = date.Value;
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        Console.WriteLine($"Dados carregados: {Data.Count} registros");
+        foreach (var item in Data)
+        {
+            Console.WriteLine($"Timestamp: {item.Timestamp}, Temp: {item.Temperature}");
+        }
+    }
+
+
+}

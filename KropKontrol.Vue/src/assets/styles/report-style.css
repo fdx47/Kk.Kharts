@@ -1,0 +1,91 @@
+.report-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+}
+
+@media (max-width: 991px) {
+  .report-container {
+    max-width: 98vw;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .report-container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 1rem;
+  }
+
+  .chart-area {
+    height: 220px !important;
+    min-height: 140px !important;
+    max-height: 340px !important;
+  }
+
+  .placeholder-message {
+    font-size: 1.05rem;
+    min-height: 20vh;
+    padding: 0.6rem 0 0 0;
+  }
+}
+
+.toggle-btn {
+  color: #26b673;
+  border-color: #26b673;
+  background: #f4f9f7;
+  transition: background 0.2s;
+}
+
+.toggle-btn:hover,
+.toggle-btn:focus {
+  background: #eafaf3;
+  color: #198754;
+  border-color: #198754;
+}
+
+.report-section .card {
+  border: none;
+}
+
+.report-section .card-header {
+  background-color: #26b673;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #198754;
+}
+
+.report-section .card-body {
+  background-color: #fff;
+  overflow-x: auto;
+  word-break: break-word;
+  font-size: 1rem;
+}
+
+.report-section .overflow-auto {
+  max-height: 400px;
+  min-height: 110px;
+}
+
+.spinner-border {
+  color: #26b673;
+}
+
+.chart-area {
+  width: 100%;
+  min-height: 310px;
+  height: 50vw;
+  max-height: 540px;
+  margin: 0 auto;
+}
+
+.placeholder-message {
+  font-size: 1.25rem;
+  color: #26b673;
+  min-height: 38vh;
+  text-align: center;
+  padding: 1.5rem 0 0 0;
+}
