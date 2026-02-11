@@ -364,41 +364,6 @@ namespace Kk.Kharts.Api.Data.Configurations
                      Seller = "3CTEC",
                      InstallationDate = new DateTime(2025, 05, 12),
                  }
-
-                 //////////////////////////////////////////////////////////////////
-                 
-                 // new Device
-                 // {
-                 //     Id = 20,
-                 //     DevEui = "24E124136F061015",
-                 //     Name = "EM300_TH_007",
-                 //     Description = "Stolon",
-                 //     Battery = 69.69f,
-                 //     LastSendAt = "2017 - 10 - 25 00:00:00",
-                 //     LastSeenAt = new DateTime(2017, 10, 25),
-                 //     Modelo = 7,
-                 //     ActiveInKropKontrol = true,
-                 //     SocieteId = 2,
-                 //     Seller = "Stratberries",
-                 //     InstallationDate = new DateTime(2025, 06, 06),
-                 // },
-
-                 //new Device
-                 //{
-                 //    Id = 22,
-                 //    DevEui = "24E124136F062043",
-                 //    Name = "EM300_TH_008",
-                 //    Description = "Stolon Ombrage",
-                 //    Battery = 69.69f,
-                 //    LastSendAt = "2017 - 10 - 25 00:00:00",
-                 //    LastSeenAt = new DateTime(2017, 10, 25),
-                 //    Modelo = 7,
-                 //    ActiveInKropKontrol = true,
-                 //    SocieteId = 4,
-                 //    Seller = "Stratberries",
-                 //    InstallationDate = new DateTime(2025, 06, 06),
-                 //}
-
             );
         }
     }

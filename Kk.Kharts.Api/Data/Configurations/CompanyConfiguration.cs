@@ -54,9 +54,6 @@ namespace Kk.Kharts.Api.Data.Configurations
                 new Company { Id = 3, Name = "Invenio" },
                 new Company { Id = 4, Name = "Pozzobon" },
                 new Company { Id = 5, Name = "Baudas" }
-                //new Societe { Id = 6, Nom = "3CTEC Biz 1", SocieteMereId = 1 },   // Filial de 3ctec
-                //new Societe { Id = 7, Nom = "3CTEC Biz 2", SocieteMereId = 1 },   // Filial de 3ctec
-
             );
         }
     }

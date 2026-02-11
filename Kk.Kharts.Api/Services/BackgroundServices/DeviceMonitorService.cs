@@ -20,9 +20,6 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Executa todos os 10 seg - debug
-            //var initialDelay = TimeSpan.FromSeconds(10);
-
             // Primeiro ciclo acontece só no início da próxima hora cheia
             var initialDelay = GetDelayUntilNextFullHour();
 
@@ -64,7 +61,6 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
                             ➡️ Aucune donnée depuis le {parisTime:dd/MM/yy HH:mm:ss} (Paris)
                             """;
 
-                        //var messageId = await telegram.SendToDeviceStatusTopicWithIdAsync(alertMessage);
                         int? messageId = null;
                         try
                         {

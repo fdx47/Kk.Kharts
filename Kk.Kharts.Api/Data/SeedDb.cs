@@ -32,8 +32,6 @@ namespace Kk.Kharts.Api.Data
                     new Company { Id = 3, Name = "Invenio" },
                     new Company { Id = 4, Name = "Pozzobon" },
                     new Company { Id = 5, Name = "Baudas" }
-                    //new Societe { Id = 6, Nom = "3CTEC Biz 1", SocieteMereId = 1 },   // Filial de 3ctec
-                    //new Societe { Id = 7, Nom = "3CTEC Biz 2", SocieteMereId = 1 },   // Filial de 3ctec
                 );
                 await _context.SaveChangesAsync();
             }
@@ -42,9 +40,7 @@ namespace Kk.Kharts.Api.Data
             await CheckUsersAsync(nom: "Francois Pascaud",  email: "francois@stratberries.com",   password: "1234", profil: "Root",   societeId: 2, headerName: "Stratberries", headerValue: "demo2025");
             await CheckUsersAsync(nom: "Christophe CAPES",  email: "christophe.capes@3ctec.fr",   password: "1234", profil: "Admin",  societeId: 1, headerName: "3CTEC",        headerValue: "demo2025");
             await CheckUsersAsync(nom: "Cloe",              email: "cloe@kropkontrol.com",        password: "1234", profil: "UserRW", societeId: 3, headerName: "Invenio",      headerValue: "28T3@3p2y$YjRC#Aii");
-            await CheckUsersAsync(nom: "Stéphane Pozzobon", email: "stephane.pozzobon@gmail.com", password: "1234", profil: "UserRW", societeId: 4, headerName: "Pozzobon",     headerValue: "A8F3T3a2y$YjtB#AiB");        
-            //await CriarTabelaDevicesModelsSeNaoExistirAsync(context);
-            //await SeedDeviceModelsAsync(context);
+            await CheckUsersAsync(nom: "Stéphane Pozzobon", email: "stephane.pozzobon@gmail.com", password: "1234", profil: "UserRW", societeId: 4, headerName: "Pozzobon",     headerValue: "A8F3T3a2y$YjtB#AiB");
         }
 
         private async Task<User> CheckUsersAsync(string nom, string email, string password, string profil, int societeId, string headerName, string headerValue)

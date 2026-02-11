@@ -11,7 +11,6 @@ namespace Kk.Kharts.Shared.Entities
 
         [Key()]
         public int Id { get; set; }
-        //public string DevEui { get; set; } = string.Empty;
         public string DevEui
         {
             get => _devEui;
@@ -21,8 +20,7 @@ namespace Kk.Kharts.Shared.Entities
         public string Description { get; set; } = string.Empty;
         public string? InstallationLocation { get; set; }
         public float Battery { get; set; }
-        public DateTime LastSeenAt { get; set; } 
-        //public DateTime LastSeenAtTime { get; set; }
+        public DateTime LastSeenAt { get; set; }
         public string LastSendAt { get; set; } = DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss zzz 'GMT'");
 
         public string Seller { get; set; } = string.Empty;            // Vendedor do dispositivo

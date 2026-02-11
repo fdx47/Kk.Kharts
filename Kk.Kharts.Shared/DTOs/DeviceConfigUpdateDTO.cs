@@ -4,9 +4,6 @@ namespace Kk.Kharts.Shared.DTOs
 {
     public class DeviceConfigUpdateDTO
     {
-        //[Required]
-        //public string DevEui { get; set; }
-
         [Required]
         public string Name { get; set; } = string.Empty;
 
@@ -15,9 +12,7 @@ namespace Kk.Kharts.Shared.DTOs
        
         [Required]
         public bool? ActiveInKropKontrol { get; set; }
-       
-        //[Required]
-        //public int CompanyId { get; set; }
+
         [Required]
         public string? InstallationLocation { get; set; }
     }

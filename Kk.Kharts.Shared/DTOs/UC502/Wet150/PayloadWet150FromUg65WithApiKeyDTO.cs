@@ -30,7 +30,7 @@ namespace Kk.Kharts.Shared.DTOs.UC502.Wet150
         }
 
         [JsonPropertyName("devEUI")]
-        public string DevEui { get; set; }  // Parte da chave primária
+        public string DevEui { get; set; } = string.Empty;  // Parte da chave primária
 
         [JsonPropertyName("sdi12_1")]
         public string? SDI12_1 { get; set; }
@@ -40,25 +40,3 @@ namespace Kk.Kharts.Shared.DTOs.UC502.Wet150
 
     }
 }
-
-//  { "applicationID":4,"devEUI":"24e124454e353793","deviceName":"UC502_353793","sdi12_1":"0+63.627+54.6+22.17\r\n"}
-/*
-{
-   "applicationID":4,
-   "devEUI":"24e124454e353793",
-   "deviceName":"UC502_353793",
-   "sdi12_1":"0+63.627+54.6+22.17\r\n"
-}
-
-{
-   "applicationID":4,
-   "devEUI":"24e124454e353793",
-   "deviceName":"UC502_353793",
-   "sdi12_1":"0+63.627+54.6+22.17\r\n"
-   "sdi12_2":"0+63.627+54.6+22.17\r\n"
-   "sdi12_3":"0+63.627+54.6+22.17\r\n"
-}
-
-
-
-*/

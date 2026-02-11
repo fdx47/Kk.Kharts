@@ -1,10 +1,11 @@
-﻿
+﻿using Kk.Kharts.Api.DependencyInjection;
 using Kk.Kharts.Api.Services.IService;
 using System.Runtime.InteropServices;
 
 namespace Kk.Kharts.Api.Services
 {
 
+    [SingletonService]
     public sealed class KkTimeZoneService : IKkTimeZoneService
     {
         private readonly TimeZoneInfo _parisTimeZone;

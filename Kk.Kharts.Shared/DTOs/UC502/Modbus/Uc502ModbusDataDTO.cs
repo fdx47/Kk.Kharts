@@ -45,6 +45,3 @@ namespace Kk.Kharts.Shared.DTOs.UC502.Modbus
         public float? Battery { get; set; } = 99.99f;
     }
 }
-
-
-//{ "applicationID":1,"devEUI":"24e124454e045483","deviceName":"UC502_045483","modbus_chn_1":411}

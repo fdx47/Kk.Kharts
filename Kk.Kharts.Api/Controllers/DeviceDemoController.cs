@@ -1,4 +1,5 @@
 ﻿using Kk.Kharts.Api.Services.IService;
+using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +30,7 @@ namespace Kk.Kharts.Api.Controllers
         [HttpGet("{devEui}")]
         public async Task<IActionResult> GetByDevEui(string devEui)
         {
-            devEui = NormalizeDevEui(devEui);
+            devEui = DevEuiNormalizer.Normalize(devEui);
             var device = await _service.GetByDevEuiAsync(devEui);
             if (device == null)
                 return NotFound(new { message = $"DeviceDemo with DevEUI: {devEui} not found." });
@@ -43,7 +44,7 @@ namespace Kk.Kharts.Api.Controllers
         public async Task<IActionResult> Create([FromBody] DeviceDemo device)
         {
             // Não precisa checar ModelState.IsValid manualmente, o ASP.NET já fará isso
-            device.DevEui = NormalizeDevEui(device.DevEui);
+            device.DevEui = DevEuiNormalizer.Normalize(device.DevEui);
             var createdDevice = await _service.CreateAsync(device);
 
             return CreatedAtAction(
@@ -58,7 +59,7 @@ namespace Kk.Kharts.Api.Controllers
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] DeviceDemo device)
         {           
-            device.DevEui = NormalizeDevEui(device.DevEui);
+            device.DevEui = DevEuiNormalizer.Normalize(device.DevEui);
             var updated = await _service.UpdateAsync(device);
 
             if (!updated)
@@ -77,17 +78,12 @@ namespace Kk.Kharts.Api.Controllers
         [HttpDelete("{devEui}")]
         public async Task<IActionResult> Delete(string devEui)
         {
-            devEui = NormalizeDevEui(devEui);
+            devEui = DevEuiNormalizer.Normalize(devEui);
             var deleted = await _service.DeleteAsync(devEui);
             if (!deleted)
                 return NotFound(new { message = $"DeviceDemo with DevEUI: {devEui} not found." });
 
             return NoContent();
-        }
-
-        private static string NormalizeDevEui(string devEui)
-        {
-            return string.IsNullOrWhiteSpace(devEui) ? devEui : devEui.Trim().ToUpperInvariant();
         }
     }
 }

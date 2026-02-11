@@ -1,4 +1,5 @@
 using Kk.Kharts.Api.Data;
+using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Types;
@@ -29,7 +30,7 @@ public sealed class LastCommandHandler(
             return;
         }
 
-        var devEui = parts[1].ToUpperInvariant();
+        var devEui = DevEuiNormalizer.Normalize(parts[1]);
         await ShowLastReadingAsync(message.Chat.Id, devEui, telegramUserId, ct);
     }
 

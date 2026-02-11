@@ -73,7 +73,6 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
                     statusCode = StatusCodes.Status409Conflict;
                     message = $"Les données avec le Timestamp : {timestamp} et le DevEui : {devEui} sont déjà enregistrées dans la base de données.";
-                    //await _telegram.SendMessageInChunksAsync(message);
                     break;
                 }
 

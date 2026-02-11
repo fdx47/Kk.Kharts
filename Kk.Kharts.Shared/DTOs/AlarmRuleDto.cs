@@ -19,9 +19,5 @@ namespace Kk.Kharts.Shared.DTOs
         public string ActiveThresholdType { get; set; } = "";
        
 
-        //[JsonIgnore]
-        //public DeviceDto? Device { get; set; }  
-
-
     }
 }

@@ -1,3 +1,4 @@
+using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -33,7 +34,7 @@ public sealed class ChartCommandHandler(
 
         if (parts.Length >= 2)
         {
-            var devEui = parts[1].ToUpperInvariant();
+            var devEui = DevEuiNormalizer.Normalize(parts[1]);
             
             // Vérifier l'accès au device
             if (!await userService.HasAccessToDeviceAsync(telegramUserId, devEui, ct))

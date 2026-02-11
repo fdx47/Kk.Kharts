@@ -8,11 +8,6 @@ namespace Kk.Kharts.Shared.Entities.Em300
     {
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public string DevEui { get; set; } = string.Empty;
-        //public string DevEui
-        //{
-        //    get => _devEui;
-        //    set => _devEui = value?.ToUpperInvariant() ?? string.Empty;
-        //}
         public float Temperature { get; set; }
         public float Humidity { get; set; }
         public float Battery { get; set; }

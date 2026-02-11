@@ -211,7 +211,6 @@ namespace Kk.Kharts.Api.Repositories
 
         public async Task<Device?> GetDeviceByDevEuiRepositoryAsync(string devEui, AuthenticatedUserDto authenticatedUser)
         {
-            //var query = _dbContext.Devices.Include(d => d.Company).AsQueryable();
             var query = _dbContext.Devices
                         .Include(d => d.Company)
                         .Include(d => d.Em300DiParameters) // Inclui os parâmetros EM300DI

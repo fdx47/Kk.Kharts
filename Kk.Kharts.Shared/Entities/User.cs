@@ -43,9 +43,6 @@ namespace Kk.Kharts.Shared.Entities
         public NotificationChannelPreference NotificationPreference { get; set; } = NotificationChannelPreference.Telegram;
         public PushoverSettings? Pushover { get; set; }
 
-        // Propriedade de Navegação: Lista de regras de alarme criadas por este usuário
-       // public List<AlarmRule> AlarmRules { get; set; } = new List<AlarmRule>();
-
         // Propriedade de Navegação para a tabela de junção
         public List<UserAlarmRule> UserAlarmRules { get; set; } = new List<UserAlarmRule>();
     }

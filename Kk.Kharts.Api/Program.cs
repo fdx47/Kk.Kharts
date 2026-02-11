@@ -1,11 +1,9 @@
 ﻿using Kk.Kharts.Api.Data;
+using Kk.Kharts.Api.DependencyInjection;
 using Kk.Kharts.Api.Middlewares;
 using Kk.Kharts.Api.Policies;
-using Kk.Kharts.Api.Repositories;
-using Kk.Kharts.Api.Repositories.IRepository;
 using Kk.Kharts.Api.Services;
 using Kk.Kharts.Api.Services.BackgroundServices;
-using Kk.Kharts.Api.Services.Ingestion;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Api.Utility;
@@ -87,66 +85,15 @@ namespace Kk.Kharts.Api
 
             builder.Services.AddHostedService<StartupNotificationService>();
 
-            builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IUserContext, UserContext>();
-           
-            builder.Services.AddScoped<ITemporaryAccessTokenService, TemporaryAccessTokenService>();
-            
-            builder.Services.AddScoped<IDeviceService, DeviceService>();
-            builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
+            // Convention-based registration: I{Name} → {Name}
+            // Lifetime defaults to Scoped; use [SingletonService] or [TransientService] on the class to override.
+            builder.Services.AddApplicationServices();
 
-            // Registrar repositório no DI container
-            builder.Services.AddScoped<IDeviceDemoRepository, DeviceDemoRepository>();
-            builder.Services.AddScoped<IDeviceDemoService, DeviceDemoService>();
-
-            builder.Services.AddScoped<IEm300ThService, Em300ThService>();
-            builder.Services.AddScoped<IEm300ThRepository, Em300ThRepository>();
-            builder.Services.AddScoped<IEm300DiService, Em300DiService>();
-            builder.Services.AddScoped<IEm300DiRepository, Em300DiRepository>();
-
-            builder.Services.AddScoped<IUc502Service, Uc502Service>();
-            builder.Services.AddScoped<IUc502Repository, Uc502Repository>();
+            // Manual registrations — name mismatch or special configuration
+            builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
             builder.Services.AddHostedService<DeviceMonitorService>();
-
-            builder.Services.AddScoped<IEmailService, SmtpEmailService>();
-            builder.Services.AddScoped<IDashboardService, DashboardService>();
-
-            builder.Services.AddScoped<IDeviceModelRepository, DeviceModelRepository>();
-            builder.Services.AddScoped<IDeviceModelService, DeviceModelService>();
-
-            builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
-            builder.Services.AddScoped<ICompanyService, CompanyService>();
-
-            // Hash ID service for obfuscating integer IDs
-            builder.Services.AddSingleton<IHashIdService, HashIdService>();
-
-            builder.Services.AddScoped<IAlarmRuleRepository, AlarmRuleRepository>();
-            builder.Services.AddScoped<IAlarmRuleService, AlarmRuleService>();
-
-            builder.Services.AddScoped<ISoilParameterRepository, SoilParameterRepository>();
-            builder.Services.AddScoped<ISoilParameterService, SoilParameterService>();
-
-            builder.Services.AddScoped<IWet150Sdi12MetadataRepository, Wet150Sdi12MetadataRepository>();
-            builder.Services.AddScoped<IWet150Sdi12MetadataService, Wet150Sdi12MetadataService>();
-
-            builder.Services.AddScoped<IApiKeyCompanyAccessor, ApiKeyCompanyAccessor>();
-            builder.Services.AddScoped<IApiKeyResolver, ApiKeyResolver>();
-
-            builder.Services.AddScoped<IApiKeyIngestionHandler, ApiKeyIngestionHandler>();
-
-            builder.Services.AddScoped<IVpnProfileService, VpnProfileService>();
-
-            builder.Services.AddScoped<IActivityService, ActivityService>();
-            builder.Services.AddScoped<IDeprecatedEndpointNotifier, DeprecatedEndpointNotifier>();
-
-            builder.Services.AddScoped<ISystemStatusService, SystemStatusService>();
-
             builder.Services.AddHostedService<DailyLogProcessorService>();
-
-            // horas utc
-            builder.Services.AddSingleton<IKkTimeZoneService, KkTimeZoneService>();
-
             builder.Services.AddHostedService<AlarmEvaluatorService>();
 
             builder.Services.AddHttpClient<IPushoverService, PushoverService>(client =>
@@ -155,8 +102,6 @@ namespace Kk.Kharts.Api
             });
 
             builder.Services.AddNotificationSystem();
-
-            builder.Services.AddScoped<IUserPreferencesService, UserPreferencesService>();
 
             builder.Services.AddControllers();
 
@@ -169,8 +114,6 @@ namespace Kk.Kharts.Api
 
             // Serviço para inicializar o banco de dados
             builder.Services.AddTransient<SeedDb>();
-
-            builder.Services.AddScoped<IJwtService, JwtService>();
 
             // Configuração da autenticação usando JWT
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -330,12 +273,6 @@ namespace Kk.Kharts.Api
 
             // CORS - aplica política segura para origens conhecidas
             app.UseCors(CorsPolicyName);
-
-            // Seed do banco de dados (apenas em desenvolvimento)
-            //if (app.Environment.IsDevelopment())
-            //{
-            //    Seed.SeedData(app);
-            //}
 
             app.UseHttpsRedirection();
             app.UseRouting();             // Precisa vir antes de autenticação/autorização

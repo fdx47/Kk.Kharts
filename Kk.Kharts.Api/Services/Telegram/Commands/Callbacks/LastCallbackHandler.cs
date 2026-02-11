@@ -1,4 +1,5 @@
 using Kk.Kharts.Api.Services.Telegram.Commands.Handlers;
+using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.Constants;
 using Telegram.Bot.Types;
 
@@ -17,7 +18,7 @@ public sealed class LastCallbackHandler(
     public async Task HandleAsync(CallbackQuery callback, CancellationToken ct = default)
     {
         var data = callback.Data ?? string.Empty;
-        var devEui = data.Replace("last:", "").ToUpperInvariant();
+        var devEui = DevEuiNormalizer.Normalize(data.Replace("last:", ""));
 
         if (string.IsNullOrEmpty(devEui))
         {

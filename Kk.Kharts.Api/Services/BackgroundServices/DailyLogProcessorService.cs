@@ -19,16 +19,6 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_summaryFilePath)!);
 
-            // Executa imediatamente ao iniciar
-            //try
-            //{
-            //    await ProcessPreviousDayLogAsync();
-            //}
-            //catch (Exception ex)
-            //{
-            //    _logger.LogError(ex, "Erreur lors du traitement du journal quotidien");
-            //}
-
             while (!stoppingToken.IsCancellationRequested)
             {
                 var now = DateTime.UtcNow;

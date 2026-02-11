@@ -141,12 +141,10 @@ namespace Kk.Kharts.Api.Services
 
         public async Task<Uc502Wet150> CalculAndAddAsync(PayloadWet150FromUg65WithApiKeyDTO payload, string devEui)
         {
-            //Device device;
             var device = await _deviceRepository.GetDeviceByIdApiKeyAsync(devEui);
 
             if (payload.Battery >= 99.9f && device != null)
             {
-                //var device = await _deviceRepository.GetDeviceByIdApiKeyAsync(devEui);
                 payload.Battery = device.Battery; // Atualiza a bateria do em300Th com o valor do dispositivo
             }
 
@@ -168,8 +166,6 @@ namespace Kk.Kharts.Api.Services
             if (payload != null)
             {
                 payload.SDI12_1 = payload.SDI12_1?.Replace("\r", "").Replace("\n", "");
-
-                //Console.WriteLine($"\nPayload - Timestamp: {payload.Timestamp}  DevEUI: {payload.DevEui}    SDI12: {payload.SDI12}", ConsoleColor.Cyan);
 
                 listaResultados = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, measurementTimestamp, payload.DevEui, _deviceService, telegram, _timeZoneService, _loggerFactory);
 
@@ -283,7 +279,7 @@ namespace Kk.Kharts.Api.Services
 
             var measurementTimestampString = entity.Timestamp.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-            entity.DevEui = entity.DevEui?.ToUpperInvariant()!;
+            entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui!);
 
 
             var uc502 = new Uc502Modbus

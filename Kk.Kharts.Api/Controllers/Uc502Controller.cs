@@ -20,9 +20,6 @@ using System.Text.Json;
 namespace Kk.Kharts.Api.Controllers
 {
     [ApiController]
-    //[Route("Api/v1/[controller]")]
-    //[Authorize]
-
     public class Uc502Controller(
         IDeviceService deviceService,
         IUc502Service uc502ModbusService,
@@ -32,6 +29,7 @@ namespace Kk.Kharts.Api.Controllers
         IApiKeyIngestionHandler ingestionHandler,
         ITelegramService telegram,
         IDeprecatedEndpointNotifier deprecatedNotifier,
+        IDuplicateMetricsService duplicateMetrics,
         ILogger<Uc502Controller> logger) : ControllerBase
     {
 
@@ -43,6 +41,7 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IApiKeyIngestionHandler _ingestionHandler = ingestionHandler ?? throw new ArgumentNullException(nameof(ingestionHandler));
         private readonly ITelegramService _telegram = telegram ?? throw new ArgumentNullException(nameof(telegram));
         private readonly IDeprecatedEndpointNotifier _deprecatedNotifier = deprecatedNotifier ?? throw new ArgumentNullException(nameof(deprecatedNotifier));
+        private readonly IDuplicateMetricsService _duplicateMetrics = duplicateMetrics ?? throw new ArgumentNullException(nameof(duplicateMetrics));
         private readonly ILogger<Uc502Controller> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -489,8 +488,10 @@ namespace Kk.Kharts.Api.Controllers
 
             if (DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestamp))
             {
-                // Send notification to Doublons topic
+                // Send notification to Doublons topic + record metrics
                 await SendDuplicateNotificationAsync(device, measurementTimestamp, HttpContext.Request.Path, entity);
+                await _duplicateMetrics.RecordDuplicateAsync(
+                    entity.DevEui, device.Name, device.CompanyName, HttpContext.Request.Path);
 
                 return StatusCode(StatusCodes.Status208AlreadyReported, new
                 {
@@ -506,10 +507,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
-                using var scope = HttpContext.RequestServices.CreateScope();
-                var telegram = scope.ServiceProvider.GetRequiredService<ITelegramService>();
-
-                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(new
+                var jsonPayload = JsonSerializer.Serialize(new
                 {
                     devEUI = device.DevEui,
                     timestamp = measurementTimestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"),
@@ -535,12 +533,11 @@ namespace Kk.Kharts.Api.Controllers
                     <pre>{jsonPayload}</pre>
                     """;
 
-                await telegram.SendToDoublonsTopicAsync(message);
+                await _telegram.SendToDoublonsTopicAsync(message);
             }
             catch (Exception ex)
             {
-                // Log but don't fail the request if notification fails
-                _logger.LogError(ex, "Failed to send duplicate notification for DevEui={DevEui}", device.DevEui);
+                _logger.LogError(ex, "Échec de l'envoi de la notification de doublon pour {DevEui}", device.DevEui);
             }
         }
 

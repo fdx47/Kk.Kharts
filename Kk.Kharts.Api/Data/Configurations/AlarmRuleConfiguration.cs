@@ -66,14 +66,6 @@ namespace Kk.Kharts.Api.Data.Configurations
                    .HasColumnName("active_threshold_type")
                    .HasMaxLength(10); // "Low" ou "High"
 
-            //   //Relacionamento com User ---
-            //    builder.HasOne(ar => ar.User) // Uma AlarmRule tem UM User
-            //        .WithMany(u => u.AlarmRules) // Um User pode ter MUITAS AlarmRules
-            //        .HasForeignKey(ar => ar.UserId) // A chave estrangeira é UserId na AlarmRule
-            //        .OnDelete(DeleteBehavior.NoAction);
-            //}
-
-
             // Relacionamento com Device
             builder.HasOne(ar => ar.Device)
                 .WithMany(d => d.AlarmRules) // Assumindo que Device tem uma List<AlarmRule> chamada AlarmRules

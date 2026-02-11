@@ -124,5 +124,145 @@ namespace Kk.Kharts.Api.Services
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<UserDTO>> GetAllUsersAsync()
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .Select(u => new UserDTO
+                {
+                    Id = u.Id,
+                    Nom = u.Nom,
+                    Email = u.Email,
+                    Role = u.Role,
+                    DateEnregistrement = u.SignupDate
+                })
+                .ToListAsync();
+        }
+
+        public async Task<User?> GetUserByIdAsync(int id)
+        {
+            return await _context.Users.FindAsync(id);
+        }
+
+        public async Task<bool> UpdateUserAsync(int id, UserAdminUpdateDTO dto)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return false;
+
+            user.Nom = dto.Nom;
+            user.Email = dto.Email;
+            user.Role = dto.Role;
+            user.CompanyId = dto.CompanyId;
+
+            if (dto.HeaderName != null)
+                user.HeaderName = dto.HeaderName;
+            if (dto.HeaderValue != null)
+                user.HeaderValue = dto.HeaderValue;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task DeleteUserAsync(int id)
+        {
+            var user = new User { Id = id };
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> UpdateSelfAccountAsync(int userId, UserUpdateSelfDTO dto)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            if (!string.IsNullOrWhiteSpace(dto.Email) && dto.Email != user.Email)
+            {
+                user.Email = dto.Email;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                user.Password = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IsEmailInUseAsync(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
+        }
+
+        public async Task<string> CreateEmailChangeRequestAsync(int userId, string newEmail)
+        {
+            var token = Guid.NewGuid().ToString();
+
+            _context.PendingEmailChanges.Add(new PendingEmailChange
+            {
+                UserId = userId,
+                NewEmail = newEmail,
+                Token = token,
+                RequestedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+            return token;
+        }
+
+        public async Task<bool> ConfirmEmailChangeAsync(string token)
+        {
+            var pending = await _context.PendingEmailChanges
+                .FirstOrDefaultAsync(p => p.Token == token && !p.Confirmed);
+
+            if (pending == null || (DateTime.UtcNow - pending.RequestedAt).TotalHours > 24)
+                return false;
+
+            var user = await _context.Users.FindAsync(pending.UserId);
+            if (user == null) return false;
+
+            user.Email = pending.NewEmail;
+            pending.Confirmed = true;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<string?> CreatePasswordResetRequestAsync(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null) return null;
+
+            var token = Guid.NewGuid().ToString();
+
+            _context.PendingPasswordResets.Add(new PendingPasswordReset
+            {
+                UserId = user.Id,
+                Token = token,
+                RequestedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+            return token;
+        }
+
+        public async Task<(bool Success, string? ErrorMessage)> ConfirmPasswordResetAsync(string token, string newPassword)
+        {
+            var pending = await _context.PendingPasswordResets
+                .FirstOrDefaultAsync(p => p.Token == token && !p.Used);
+
+            if (pending == null || (DateTime.UtcNow - pending.RequestedAt).TotalHours > 24)
+                return (false, "Le lien est invalide ou a expiré.");
+
+            var user = await _context.Users.FindAsync(pending.UserId);
+            if (user == null) return (false, "Utilisateur non trouvé.");
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            pending.Used = true;
+
+            await _context.SaveChangesAsync();
+            return (true, null);
+        }
     }
 }

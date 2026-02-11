@@ -7,8 +7,7 @@ namespace Kk.Kharts.Shared.Entities.UC502.Wet150MultiSensor
     {
         private string _devEui = string.Empty;
 
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow; // Parte da chave primária       
-        //public string DevEui { get; set; } = string.Empty;       // Parte da chave primária        
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow; // Parte da chave primária
         public string DevEui
         {
             get => _devEui;

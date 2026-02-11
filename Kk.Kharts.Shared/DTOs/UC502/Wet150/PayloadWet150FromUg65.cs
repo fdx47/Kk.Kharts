@@ -26,5 +26,3 @@ namespace Kk.Kharts.Shared.DTOs.UC502.Wet150
         public Device? Device { get; set; }                  // Navegação para a tabela Device
     }
 }
-
- //  { "applicationID":4,"devEUI":"24e124454e353793","deviceName":"UC502_353793","sdi12_1":"0+63.627+54.6+22.17\r\n"}

@@ -256,8 +256,6 @@ public class AlarmEvaluatorService : BackgroundService
                     }
                     // Condição para ENVIAR uma notificação de RESET de alarme
                     // Envia se: O alarme estava ativo mas agora está "limpo" (fora da zona de histérese ou voltou ao normal)
-
-                    //else if (rule.IsAlarmActive && !flagShouldSendAlarmNotification && !rule.IsAlarmHandled)
                     else if (flagACK)
                             {
                         _logger.LogInformation("Reset alarme pour règle ID={RuleId}", rule.Id);

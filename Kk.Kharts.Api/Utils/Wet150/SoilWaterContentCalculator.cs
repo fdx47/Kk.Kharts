@@ -56,10 +56,9 @@ namespace Kk.Kharts.Api.Utility.Wet150
 
                     float vwc = (float)Math.Round(theta * 100, 2);
 
-                    // Normalizar VWC para evitar saturação irreal (ex.: 100%)
+                    // Normalizar VWC pour éviter une saturation irréaliste
                     if (vwc < 0.0f) vwc = 0.0f;
-                    // if (vwc > 80.0f) vwc = 80.0f; // limite conservador
-                    if (vwc > 100.0f) vwc = 100.0f;  // limite conservador
+                    if (vwc > 100.0f) vwc = 100.0f;
 
                     float ecp = 0.0f;
                     if (epsilonPermittivite > epsilon0)

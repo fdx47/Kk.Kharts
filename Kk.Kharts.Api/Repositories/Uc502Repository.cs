@@ -1,5 +1,6 @@
 ﻿using Kk.Kharts.Api.Data;
 using Kk.Kharts.Api.Repositories.IRepository;
+using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.DTOs;
 using Kk.Kharts.Shared.DTOs.UC502.Wet150.Wet150Multisensor;
 using Kk.Kharts.Shared.Entities;
@@ -31,8 +32,7 @@ namespace Kk.Kharts.Api.Repositories
                 throw new Exception($"Aucun dispositif trouvé avec l'identifiant {entity.DevEui}.");
             }
 
-            // entity.Device = device;   // setar a entidade de navegação
-            entity.DevEui = entity.DevEui?.ToUpperInvariant()!;
+            entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui!);
             await _context.Uc502Wet150s.AddAsync(entity);  // Adicionar a entidade           
             await _context.SaveChangesAsync();       // Salvar as alterações
         }

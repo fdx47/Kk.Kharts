@@ -90,15 +90,6 @@ namespace Kk.Kharts.Api.Repositories
                 .Where(r => r.DevEui == devEui)
                 .ToListAsync();
 
-            //return alarmRules.Select(rule => new AlarmRule
-            //{
-            //    PropertyName = rule.PropertyName,
-            //    LowValue = rule.LowValue,
-            //    HighValue = rule.HighValue,
-            //    Hysteresis = rule.Hysteresis
-            //}).ToList();
-
-
             // Mapear a lista de AlarmRule (entidade) para List<AlarmRuleResponse> (DTO)
             var alarmRuleResponses = alarmRules.Select(ar => new AlarmRuleDto
             {

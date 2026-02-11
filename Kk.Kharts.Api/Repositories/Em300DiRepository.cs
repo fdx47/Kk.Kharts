@@ -27,12 +27,6 @@ namespace Kk.Kharts.Api.Repositories
 
         async Task<Em300Di> IEm300DiRepository.AddEntityAndSaveAsync(Em300Di entity, string devEui)
         {
-            //// Verifica se DeviceId está preenchido
-            //if (entity.DevEui == 0)
-            //{
-            //    throw new Exception("DeviceId não pode ser zero.");
-            //}
-
             // Verificar se o dispositivo existe no banco
             var device = await _context.Devices
                 .AsNoTracking() // Só para leitura

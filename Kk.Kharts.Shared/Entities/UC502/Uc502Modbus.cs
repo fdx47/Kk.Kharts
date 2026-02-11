@@ -12,7 +12,7 @@ namespace Kk.Kharts.Shared.Entities.UC502
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;  // Parte da chave primária
 
         [JsonPropertyName("devEUI")]        
-        public string DevEui { get; set; }  // Parte da chave primária
+        public string DevEui { get; set; } = string.Empty;  // Parte da chave primária
 
         [JsonPropertyName("modbus_chn_1")]
         public float? ModbusChannel1 { get; set; } 
@@ -43,5 +43,3 @@ namespace Kk.Kharts.Shared.Entities.UC502
         public Device? Device { get; set; }         // Navegação para a tabela Device
     }
 }
-
-//{ "applicationID":1,"devEUI":"24e124454e045483","deviceName":"UC502_045483","modbus_chn_1":0}

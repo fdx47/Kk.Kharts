@@ -2,11 +2,9 @@
 using Kk.Kharts.Api.DTOs.Requests.Em300;
 using Kk.Kharts.Api.Services.Ingestion;
 using Kk.Kharts.Api.Services.IService;
-using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.DTOs.Em300.Em300Di;
 using Kk.Kharts.Shared.DTOs.Em300.Em300Th;
-using Kk.Kharts.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +22,6 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IUserContext _userContext;
         private readonly ILogger<Em300Controller> _logger;
         private readonly IApiKeyIngestionHandler _ingestionHandler;
-        private readonly ITelegramService _telegram;
         private readonly IDeprecatedEndpointNotifier _deprecatedNotifier;
 
         public Em300Controller(
@@ -33,7 +30,6 @@ namespace Kk.Kharts.Api.Controllers
             IUserContext userContext,
             ILogger<Em300Controller> logger,
             IApiKeyIngestionHandler ingestionHandler,
-            ITelegramService telegram,
             IDeprecatedEndpointNotifier deprecatedNotifier)
         {
             _em300ThService = em300ThService;
@@ -41,7 +37,6 @@ namespace Kk.Kharts.Api.Controllers
             _userContext = userContext;
             _logger = logger;
             _ingestionHandler = ingestionHandler;
-            _telegram = telegram;
             _deprecatedNotifier = deprecatedNotifier;
         }
 

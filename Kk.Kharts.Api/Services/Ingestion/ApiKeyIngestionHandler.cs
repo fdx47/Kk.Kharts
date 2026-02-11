@@ -12,17 +12,20 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
     private readonly IApiKeyCompanyAccessor _companyAccessor;
     private readonly IDeviceService _deviceService;
     private readonly ITelegramService _telegram;
+    private readonly IDuplicateMetricsService _duplicateMetrics;
     private readonly ILogger<ApiKeyIngestionHandler> _logger;
 
     public ApiKeyIngestionHandler(
         IApiKeyCompanyAccessor companyAccessor,
         IDeviceService deviceService,
         ITelegramService telegram,
+        IDuplicateMetricsService duplicateMetrics,
         ILogger<ApiKeyIngestionHandler> logger)
     {
         _companyAccessor = companyAccessor;
         _deviceService = deviceService;
         _telegram = telegram;
+        _duplicateMetrics = duplicateMetrics;
         _logger = logger;
     }
 
@@ -62,7 +65,7 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
 
         if (DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestampUtc))
         {
-            // Send notification to Doublons topic
+            // Send notification to Doublons topic + record metrics
             await SendDuplicateNotificationAsync(
                 device,
                 measurementTimestampUtc,
@@ -70,6 +73,9 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 duplicateMessage,
                 payload,
                 duplicateContext);
+
+            await _duplicateMetrics.RecordDuplicateAsync(
+                normalizedDevEui, device.Name, device.CompanyName, controller.HttpContext.Request.Path);
 
             return ApiKeyIngestionResult.FromShortCircuit(controller.Ok(new
             {

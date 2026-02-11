@@ -76,7 +76,7 @@ namespace Kk.Kharts.Api.Services
 
             var em300Th = new Em300Th
             {
-                DevEui = entity.DevEui.ToUpperInvariant(),
+                DevEui = DevEuiNormalizer.Normalize(entity.DevEui),
                 Timestamp = measurementTimestamp,
                 DeviceId = device2?.Id ?? 0,
                 Temperature = entity.Temperature,

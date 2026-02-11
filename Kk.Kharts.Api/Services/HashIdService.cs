@@ -1,4 +1,5 @@
 using HashidsNet;
+using Kk.Kharts.Api.DependencyInjection;
 using Kk.Kharts.Api.Services.IService;
 
 namespace Kk.Kharts.Api.Services;
@@ -7,6 +8,7 @@ namespace Kk.Kharts.Api.Services;
 /// Implementation of IHashIdService using HashidsNet library.
 /// Generates short, unique, non-sequential hash strings from integer IDs.
 /// </summary>
+[SingletonService]
 public class HashIdService : IHashIdService
 {
     private readonly Hashids _hashids;

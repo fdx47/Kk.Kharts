@@ -21,7 +21,6 @@
                 : $"Il y a {value} {unit}";
         }
 
-        //if (seconds < 30) return "À l'instant";
         if (seconds < 60) return Format(seconds.ToString(), "seconde", "secondes");
         if (minutes < 2) return isFuture ? "Dans 1 minute" : "Il y a 1 minute";
         if (minutes < 60) return Format(minutes.ToString(), "minute", "minutes");

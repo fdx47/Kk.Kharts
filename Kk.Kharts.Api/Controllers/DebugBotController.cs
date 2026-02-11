@@ -1,4 +1,3 @@
-using Kk.Kharts.Api.Data;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Api.Utility.Constants;
@@ -6,7 +5,6 @@ using Kk.Kharts.Shared.Constants;
 using Kk.Kharts.Shared.DTOs;
 using Kk.Kharts.Shared.Entities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text;
@@ -92,7 +90,7 @@ Identifiants Root requis.
     }
 
 
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDebugBotDataService _dataService;
     private readonly IUserService _userService;
     private readonly TelegramOptions _options;
     private readonly TelegramBotClient _botClient;
@@ -106,7 +104,7 @@ Identifiants Root requis.
     private sealed record DeviceTimestamp(Device Device, DateTime? LastTimestamp);
 
     public DebugBotController(
-        IServiceScopeFactory scopeFactory,
+        IDebugBotDataService dataService,
         IUserService userService,
         IOptions<TelegramOptions> options,
         ILogger<DebugBotController> logger,
@@ -115,7 +113,7 @@ Identifiants Root requis.
         ITelegramUserService telegramUserService,
         ITemporaryAccessTokenService temporaryAccessTokenService)
     {
-        _scopeFactory = scopeFactory;
+        _dataService = dataService;
         _userService = userService;
         _options = options.Value;
         _botClient = new TelegramBotClient(_options.DebugBotToken);
@@ -242,14 +240,9 @@ Identifiants Root requis.
     // /last
     private async Task HandleLastCommandAsync(long chatId, string commandText, CancellationToken ct, int? topicId = null)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var devices = await db.Devices
-            .Include(d => d.Company)
-            .Where(d => d.ActiveInKropKontrol)
+        var devices = (await _dataService.GetActiveDevicesWithCompanyAsync(ct))
             .OrderBy(d => d.LastSeenAt)
-            .ToListAsync(ct);
+            .ToList();
 
         var args = commandText.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var showAll = args.Length > 1 && args[1].Equals("all", StringComparison.OrdinalIgnoreCase);
@@ -364,13 +357,7 @@ Identifiants Root requis.
         var thresholdText = FormatDurationDescription(threshold);
         var windowText = FormatDurationDescription(maxAge);
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var devices = await db.Devices
-            .Include(d => d.Company)
-            .Where(d => d.ActiveInKropKontrol)
-            .ToListAsync(ct);
+        var devices = await _dataService.GetActiveDevicesWithCompanyAsync(ct);
 
         var deviceTimestamps = devices
             .Select(d => new DeviceTimestamp(d, GetLastTelemetryTimestamp(d)))
@@ -431,13 +418,7 @@ Identifiants Root requis.
 
         var cutoff = DateTime.UtcNow.AddMinutes(-minutes);
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var devices = await db.Devices
-            .Include(d => d.Company)
-            .Where(d => d.ActiveInKropKontrol)
-            .ToListAsync(ct);
+        var devices = await _dataService.GetActiveDevicesWithCompanyAsync(ct);
 
         var filtered = devices
             .Where(d => DateTime.TryParse(d.LastSendAt, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var sendAt)
@@ -483,13 +464,7 @@ Identifiants Root requis.
     // /inactive
     private async Task HandleInactiveCommandAsync(long chatId, CancellationToken ct, int? topicId = null)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var inactiveDevices = await db.Devices
-            .Include(d => d.Company)
-            .Where(d => !d.ActiveInKropKontrol)
-            .ToListAsync(ct);
+        var inactiveDevices = await _dataService.GetInactiveDevicesWithCompanyAsync(ct);
 
         if (inactiveDevices.Count == 0)
         {
@@ -572,9 +547,6 @@ Identifiants Root requis.
     // /stats
     private async Task HandleStatsCommandAsync(long chatId, string text, CancellationToken ct, int? topicId = null)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
         DateOnly? requestedDate = null;
         var partsInput = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
@@ -584,33 +556,8 @@ Identifiants Root requis.
         }
 
         var now = DateTime.UtcNow;
-        var lastHour = now.AddHours(-1);
-        var lastDay = now.AddDays(-2);
-
-        var totalDevices = await db.Devices.CountAsync(d => d.ActiveInKropKontrol, ct);
-        var onlineDevices = await db.Devices.CountAsync(d => d.ActiveInKropKontrol && d.LastSeenAt >= lastHour, ct);
-        var offlineDevices = Math.Max(totalDevices - onlineDevices, 0);
-        var inactiveDevices = await db.Devices.CountAsync(d => !d.ActiveInKropKontrol, ct);
-
-        var lowBatteryDevices = await db.Devices
-            .CountAsync(d => d.ActiveInKropKontrol && d.Battery <= 20, ct);
-
-        var activeAlerts = await db.AlarmRules.CountAsync(a => a.Enabled && a.IsAlarmActive, ct);
-        var totalRules = await db.AlarmRules.CountAsync(ct);
-
-        var totalUsers = await db.Users.CountAsync(ct);
-        var linkedTelegramUsers = await db.Users.CountAsync(u => u.TelegramUserId != null, ct);
-
-        var dashboards = await db.Dashboards.CountAsync(ct);
+        var stats = await _dataService.GetSystemStatsAsync(ct);
         var supportTickets24h = 0;
-
-        var topCompanies = await db.Devices
-            .Where(d => d.ActiveInKropKontrol)
-            .GroupBy(d => d.Company!.Name)
-            .Select(g => new { Company = g.Key, Count = g.Count() })
-            .OrderByDescending(g => g.Count)
-            .Take(5)
-            .ToListAsync(ct);
 
         var localNow = ConvertToParisTime(now);
 
@@ -619,31 +566,31 @@ Identifiants Root requis.
         sb.AppendLine($"🕒 Généré: <i>{localNow:dd/MM/yyyy HH:mm} (heure de Paris)</i>");
         sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━");
         sb.AppendLine("📡 <b>Capteurs</b>");
-        sb.AppendLine($"• Total actifs: <b>{totalDevices}</b>");
-        sb.AppendLine($"• En ligne (1h): <b>{onlineDevices}</b>");
-        sb.AppendLine($"• Hors ligne estimés: <b>{offlineDevices}</b>");
-        sb.AppendLine($"• Inactifs (flag): <b>{inactiveDevices}</b>");
-        sb.AppendLine($"• Batterie ≤20%: <b>{lowBatteryDevices}</b>");
+        sb.AppendLine($"• Total actifs: <b>{stats.TotalActiveDevices}</b>");
+        sb.AppendLine($"• En ligne (1h): <b>{stats.OnlineDevices}</b>");
+        sb.AppendLine($"• Hors ligne estimés: <b>{stats.OfflineDevices}</b>");
+        sb.AppendLine($"• Inactifs (flag): <b>{stats.InactiveDevices}</b>");
+        sb.AppendLine($"• Batterie ≤20%: <b>{stats.LowBatteryDevices}</b>");
         sb.AppendLine();
         sb.AppendLine("🔔 <b>Alertes</b>");
-        sb.AppendLine($"• Règles actives: <b>{totalRules}</b>");
-        sb.AppendLine($"• Alertes déclenchées: <b>{activeAlerts}</b>");
+        sb.AppendLine($"• Règles actives: <b>{stats.TotalAlarmRules}</b>");
+        sb.AppendLine($"• Alertes déclenchées: <b>{stats.ActiveAlerts}</b>");
         sb.AppendLine();
         sb.AppendLine("👥 <b>Utilisateurs</b>");
-        sb.AppendLine($"• Total: <b>{totalUsers}</b>");
-        sb.AppendLine($"• Telegram liés: <b>{linkedTelegramUsers}</b>");
-        var ratio = totalUsers > 0 ? linkedTelegramUsers * 100.0 / totalUsers : 0;
+        sb.AppendLine($"• Total: <b>{stats.TotalUsers}</b>");
+        sb.AppendLine($"• Telegram liés: <b>{stats.LinkedTelegramUsers}</b>");
+        var ratio = stats.TotalUsers > 0 ? stats.LinkedTelegramUsers * 100.0 / stats.TotalUsers : 0;
         sb.AppendLine($"• Taux de liaison: <b>{ratio:F1}%</b>");
         sb.AppendLine();
         sb.AppendLine("🗂️ <b>Dashboard & Support</b>");
-        sb.AppendLine($"• Dashboards sauvegardés: <b>{dashboards}</b>");
+        sb.AppendLine($"• Dashboards sauvegardés: <b>{stats.Dashboards}</b>");
         sb.AppendLine($"• Tickets support 24h: <b>{supportTickets24h}</b>");
 
-        if (topCompanies.Count > 0)
+        if (stats.TopCompanies.Count > 0)
         {
             sb.AppendLine();
             sb.AppendLine("🏢 <b>Top 5 sociétés (capteurs actifs)</b>");
-            foreach (var entry in topCompanies)
+            foreach (var entry in stats.TopCompanies)
             {
                 sb.AppendLine($"• {entry.Company}: <b>{entry.Count}</b>");
             }

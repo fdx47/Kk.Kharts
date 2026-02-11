@@ -1,15 +1,13 @@
 ﻿using Kk.Kharts.Api.Attributes;
 using Kk.Kharts.Api.Services.IService;
-using Kk.Kharts.Api.Services.Telegram;
+using Kk.Kharts.Api.Utils;
 using Kk.Kharts.Shared.DTOs;
-using Kk.Kharts.Shared.Entities;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kk.Kharts.Api.Controllers
 {
-    //[Route("api/v1/[controller]")]
     [ApiController]
     [Authorize]
     public class DeviceController : ControllerBase
@@ -19,20 +17,16 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IDeviceModelService _serviceDeviceModels;
         private readonly IDeviceRepository _deviceRepo;
         private readonly IAlarmRuleService _alarmService;
-        private readonly ITelegramService _telegram;
-        private readonly IDeprecatedEndpointNotifier _deprecatedNotifier;
         private readonly ILogger<DeviceController> _logger;
 
         public DeviceController(IDeviceService service, IUserContext userContext, IDeviceModelService serviceDeviceModels, IDeviceRepository deviceRepo,
-        IAlarmRuleService alarmService, ITelegramService telegram, IDeprecatedEndpointNotifier deprecatedNotifier, ILogger<DeviceController> logger)
+        IAlarmRuleService alarmService, ILogger<DeviceController> logger)
         {
             _deviceService = service;
             _userContext = userContext;
             _serviceDeviceModels = serviceDeviceModels;
             _deviceRepo = deviceRepo;
             _alarmService = alarmService;
-            _telegram = telegram;
-            _deprecatedNotifier = deprecatedNotifier;
             _logger = logger;
         }
 
@@ -89,7 +83,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
-                devEui = NormalizeDevEui(devEui);
+                devEui = DevEuiNormalizer.Normalize(devEui);
                 var authenticatedUser = await _userContext.GetUserInfoFromToken();
 
                 var result = await _deviceService.GetDeviceByDevEuiAsync<DeviceDto>(devEui: devEui, authenticatedUser);
@@ -121,7 +115,6 @@ namespace Kk.Kharts.Api.Controllers
         /// <returns>Le niveau de batterie du dispositif.</returns>
         /// <response code="200">Niveau de batterie récupéré.</response>
         /// <response code="400">Erreur lors de la récupération.</response>
-        //[HttpGet("api/v1/devices/{devEui}/battery")]
         [HttpGet("api/v1/devices/battery")]
         [ProducesResponseType(typeof(BatteryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -135,7 +128,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
-                devEui = NormalizeDevEui(devEui);
+                devEui = DevEuiNormalizer.Normalize(devEui);
                 var authenticatedUser = await _userContext.GetUserInfoFromToken();
 
 
@@ -175,7 +168,7 @@ namespace Kk.Kharts.Api.Controllers
 
         private async Task<IActionResult> ProcessUpdateDevice(string devEui, DeviceConfigUpdateDTO dto)
         {
-            devEui = NormalizeDevEui(devEui);
+            devEui = DevEuiNormalizer.Normalize(devEui);
             var authenticatedUser = await _userContext.GetUserInfoFromToken();
 
             if (!ModelState.IsValid)
@@ -187,8 +180,6 @@ namespace Kk.Kharts.Api.Controllers
 
             return NoContent();
         }
-
-        #region POST Create Device
 
         /// <summary>
         /// Crée un nouveau dispositif dans le système. Réservé aux administrateurs Root.
@@ -214,7 +205,7 @@ namespace Kk.Kharts.Api.Controllers
             try
             {
                 var user = await _userContext.GetUserInfoFromToken();
-                dto.DevEui = NormalizeDevEui(dto.DevEui);
+                dto.DevEui = DevEuiNormalizer.Normalize(dto.DevEui);
                 await _deviceService.CreateDeviceAsync(dto, user);
                 return Ok(new { message = "Dispositif créé avec succès !" });
 
@@ -228,7 +219,7 @@ namespace Kk.Kharts.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        #endregion
+
 
         /// <summary>
         /// Récupère la liste de tous les modèles de dispositifs disponibles. Réservé aux administrateurs Root.
@@ -269,7 +260,7 @@ namespace Kk.Kharts.Api.Controllers
 
         private async Task<IActionResult> ProcessGetModelByDevEui(string devEui)
         {
-            devEui = NormalizeDevEui(devEui);
+            devEui = DevEuiNormalizer.Normalize(devEui);
             var model = await _serviceDeviceModels.GetModelByDevEuiAsync(devEui);
             if (model == null)
                 return NotFound(new { message = "Modèle introuvable pour ce DevEUI." });
@@ -295,13 +286,6 @@ namespace Kk.Kharts.Api.Controllers
 
         private async Task<IActionResult> ProcesssGetAllAlarms()
         {
-            var authenticatedUser = await _userContext.GetUserInfoFromToken();
-
-            if (authenticatedUser.Role != "Root")
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Niveau d'accès insuffisant pour accéder à cette ressource." });
-            }
-
             var alarms = await _alarmService.GetAllActiveRulesAsync();
             return Ok(alarms);
         }
@@ -330,7 +314,7 @@ namespace Kk.Kharts.Api.Controllers
 
             foreach (var deviceEntry in payload)
             {
-                var devEui = NormalizeDevEui(deviceEntry.Key);
+                var devEui = DevEuiNormalizer.Normalize(deviceEntry.Key);
                 var thresholds = deviceEntry.Value;
 
                 var device = await _deviceRepo.GetDeviceByDevEuiRepositoryAsync(devEui, authenticatedUser);
@@ -366,7 +350,7 @@ namespace Kk.Kharts.Api.Controllers
         private async Task<IActionResult> ProcessGetAlarmsByDevEui(string devEui)
         {
 
-            devEui = NormalizeDevEui(devEui);
+            devEui = DevEuiNormalizer.Normalize(devEui);
             var authenticatedUser = await _userContext.GetUserInfoFromToken();
             var device = await _deviceRepo.GetDeviceByDevEuiRepositoryAsync(devEui, authenticatedUser);
 
@@ -377,12 +361,6 @@ namespace Kk.Kharts.Api.Controllers
 
             var alarms = await _alarmService.GetActiveRulesByDevEuiAsync(devEui);
             return Ok(alarms);
-        }
-
-
-        private static string NormalizeDevEui(string devEui)
-        {
-            return string.IsNullOrWhiteSpace(devEui) ? devEui : devEui.Trim().ToUpperInvariant();
         }
     }
 }

@@ -218,7 +218,6 @@ public sealed class FilterCallbackHandler(
 
         var ts = DateTime.UtcNow - dateTime.Value;
 
-        //if (ts.TotalSeconds < 30) return "À l'instant";
         if (ts.TotalMinutes < 1) return $"{ts.Seconds} secondes";
         if (ts.TotalMinutes < 2) return "1 minute";
         if (ts.TotalHours < 1) return $"{(int)ts.TotalMinutes} minutes";

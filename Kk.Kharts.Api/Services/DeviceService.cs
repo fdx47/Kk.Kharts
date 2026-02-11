@@ -187,18 +187,6 @@ namespace Kk.Kharts.Api.Services
 
         public async Task<BatteryResponse> UpdateBatteryAsync(string devEui, float battery, AuthenticatedUserDto authenticatedUser)
         {
-            // Se o usuário for Root, ele tem acesso a todos os dispositivos
-            if (authenticatedUser.Role != "Root")
-            {
-                // Verifica se o usuário tem permissão para acessar o dispositivo com o DevEui fornecido
-                //var hasAccess = await _userDeviceRepository.HasAccessToDeviceAsync(authenticatedUser.UserId, devEui);
-
-                //if (!hasAccess)
-                //{
-                //    throw new UnauthorizedAccessException("Você não tem permissão para acessar este dispositivo.");
-                //}
-            }
-
             // Recupera o dispositivo pelo DevEui
             var device = await _deviceRepository.GetDeviceByDevEuiRepositoryAsync(devEui, authenticatedUser);
 
@@ -281,13 +269,6 @@ namespace Kk.Kharts.Api.Services
 
             if (!string.IsNullOrEmpty(dto.InstallationLocation))
                 device.InstallationLocation = dto.InstallationLocation;
-
-
-
-            //if (authenticatedUser.Role == "Root" && dto.CompanyId.HasValue)
-            //{
-            //    device.CompanyId = dto.CompanyId.Value;
-            //}
 
             await _deviceRepository.UpdateAsync(device, authenticatedUser);
             await _deviceRepository.SaveChangesAsync();

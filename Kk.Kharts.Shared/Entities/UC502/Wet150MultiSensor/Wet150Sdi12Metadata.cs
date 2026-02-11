@@ -9,7 +9,6 @@ namespace Kk.Kharts.Shared.Entities.UC502.Wet150MultiSensor
      
         [Key]
         public int Id { get; set; }
-        //public string DevEui { get; set; } = string.Empty;   // Identifica o dispositivo
         public string DevEui
         {
             get => _devEui;

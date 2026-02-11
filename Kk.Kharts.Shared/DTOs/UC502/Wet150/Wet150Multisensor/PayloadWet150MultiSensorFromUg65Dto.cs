@@ -29,24 +29,6 @@ namespace Kk.Kharts.Shared.DTOs.UC502
         [JsonExtensionData]
         public Dictionary<string, JsonElement> ExtraFieldsSdi12 { get; set; } = new();
 
-        //[JsonPropertyName("sdi12_1")]
-        //public string? SDI12_1 { get; set; }
-        //[JsonPropertyName("sdi12_2")]
-        //public string? SDI12_21 { get; set; }
-        //[JsonPropertyName("sdi12_3")]
-        //public string? SDI12_3 { get; set; }
-        //[JsonPropertyName("sdi12_4")]
-        //public string? SDI12_4 { get; set; }
         public float? Battery { get; set; } = 99.99f;
     }
 }
-
-
-/*
-{
-   "applicationID":4,
-   "devEUI":"24e124454e353793",
-   "deviceName":"UC502_353793",
-   "sdi12_1":"0+63.627+54.6+22.17\r\n"
-}
-*/

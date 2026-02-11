@@ -22,7 +22,6 @@ namespace Kk.Kharts.Api.Repositories
         public async Task<List<Company>> GetAllAsync()
         {
             return await _context.Companies
-                //.Where(c => c.IsActive)
                 .Include(c => c.ParentCompany)
                 .Include(c => c.Subsidiaries)
                 .ToListAsync();
