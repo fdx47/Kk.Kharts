@@ -37,41 +37,6 @@
     }
 
 
-    //public static string ToHumanReadableTime(this DateTime dateTime)
-    //{
-    //    var timeSpan = DateTime.Now - dateTime;
-
-    //    // Função auxiliar para formatar a unidade de tempo
-    //    string FormatTimeUnit(int value, string unit)
-    //    {
-    //        return value == 1 ? $"1 {unit} ago" : $"{value} {unit}s ago";
-    //    }
-
-    //    switch (timeSpan.TotalSeconds)
-    //    {
-    //        case var seconds when seconds < 60:
-    //            return FormatTimeUnit((int)timeSpan.TotalSeconds, "second");
-
-    //        case var minutes when timeSpan.TotalMinutes < 60:
-    //            return FormatTimeUnit((int)timeSpan.TotalMinutes, "minute");
-
-    //        case var hours when timeSpan.TotalHours < 24:
-    //            return FormatTimeUnit((int)timeSpan.TotalHours, "hour");
-
-    //        case var days when timeSpan.TotalDays < 30:
-    //            return FormatTimeUnit((int)timeSpan.TotalDays, "day");
-
-    //        case var daysInMonth when timeSpan.TotalDays < 365:
-    //            int months = (int)(timeSpan.TotalDays / 30);
-    //            return FormatTimeUnit(months, "month");
-
-    //        default:
-    //            int years = (int)(timeSpan.TotalDays / 365);
-    //            return FormatTimeUnit(years, "year");
-    //    }
-    //}
-
-
     public static string ToHumanizeLastSentAt(this string lastSentAt)
     {
         if (string.IsNullOrWhiteSpace(lastSentAt))

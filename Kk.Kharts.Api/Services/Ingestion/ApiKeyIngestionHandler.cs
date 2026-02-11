@@ -12,22 +12,27 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
     private readonly IApiKeyCompanyAccessor _companyAccessor;
     private readonly IDeviceService _deviceService;
     private readonly ITelegramService _telegram;
+    private readonly ILogger<ApiKeyIngestionHandler> _logger;
 
     public ApiKeyIngestionHandler(
         IApiKeyCompanyAccessor companyAccessor,
         IDeviceService deviceService,
-        ITelegramService telegram)
+        ITelegramService telegram,
+        ILogger<ApiKeyIngestionHandler> logger)
     {
         _companyAccessor = companyAccessor;
         _deviceService = deviceService;
         _telegram = telegram;
+        _logger = logger;
     }
 
     public async Task<ApiKeyIngestionResult> PrepareAsync(
         ControllerBase controller,
         string? rawDevEui,
         string duplicateMessage,
-        DateTime? measurementTimestampUtc = null)
+        DateTime? measurementTimestampUtc = null,
+        object? payload = null,
+        string? duplicateContext = null)
     {
         if (!controller.ModelState.IsValid)
         {
@@ -58,18 +63,30 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         if (DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestampUtc))
         {
             // Send notification to Doublons topic
-            await SendDuplicateNotificationAsync(device, measurementTimestampUtc, controller.HttpContext.Request.Path);
+            await SendDuplicateNotificationAsync(
+                device,
+                measurementTimestampUtc,
+                controller.HttpContext.Request.Path,
+                duplicateMessage,
+                payload,
+                duplicateContext);
 
             return ApiKeyIngestionResult.FromShortCircuit(controller.Ok(new
             {
-                message = "Mesure déjà reçue et enregistrée précédemment."
+                message = duplicateMessage
             }));
         }
 
         return ApiKeyIngestionResult.Success(company, device, normalizedDevEui, measurementTimestampUtc);
     }
 
-    private async Task SendDuplicateNotificationAsync(DeviceDto device, DateTime? measurementTimestampUtc, string endpoint)
+    private async Task SendDuplicateNotificationAsync(
+        DeviceDto device,
+        DateTime? measurementTimestampUtc,
+        string endpoint,
+        string duplicateMessage,
+        object? payload,
+        string? duplicateContext)
     {
         try
         {
@@ -79,11 +96,15 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 devEUI = device.DevEui,
                 timestamp = timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"),
                 lastSendAt = device.LastSendAt,
-                endpoint = endpoint
+                endpoint,
+                payload,
+                duplicateContext
             }, new JsonSerializerOptions { WriteIndented = true });
 
             var message = $"""
                 🔄 <b>Donnée dupliquée détectée</b>
+
+                {duplicateContext}
 
                 <b>DevEUI:</b> <code>{device.DevEui}</code>
                 <b>Device:</b> {device.Name}
@@ -96,6 +117,8 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
 
                 <b>Endpoint:</b> <code>{endpoint}</code>
 
+                <i>{duplicateMessage}</i>
+
                 <pre>{jsonPayload}</pre>
                 """;
 
@@ -103,7 +126,7 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to send duplicate notification: {ex.Message}");
+            _logger.LogError(ex, "Échec de l'envoi de la notification de doublon pour {DevEui}", device.DevEui);
         }
     }
 }

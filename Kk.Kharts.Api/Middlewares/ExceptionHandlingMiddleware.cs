@@ -141,10 +141,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         }
 
 
+        var safeDetails = statusCode < 500 ? exception.Message : null;
+
         var result = JsonSerializer.Serialize(new
         {
             message,
-            details = exception.Message
+            details = safeDetails
         });
 
         context.Response.StatusCode = statusCode;

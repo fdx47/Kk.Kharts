@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Telegram.Bot.Types;
 
-namespace Kk.Kharts.Controllers;
+namespace Kk.Kharts.Api.Controllers;
 
 /// <summary>
 /// Controller para o Bot Cliente (kropkontrol_bot).
@@ -47,11 +47,11 @@ public sealed class ClientBotController(IServiceScopeFactory scopeFactory, IOpti
         }
         catch (OperationCanceledException)
         {
-            logger.LogDebug("Client bot: traitement annulé pour update {UpdateId}", update.Id);
+            //logger.LogDebug("Client bot: traitement annulé pour update {UpdateId}", update.Id);
         }
-        catch (Exception ex)
+        //catch (Exception ex)
         {
-            logger.LogError(ex, "Client bot: erreur lors du traitement de l'update {UpdateId}", update.Id);
+            //logger.LogError(ex, "Client bot: erreur lors du traitement de l'update {UpdateId}", update.Id);
         }
 
         return Ok();

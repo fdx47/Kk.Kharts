@@ -24,14 +24,15 @@ namespace Kk.Kharts.Api.Controllers
     //[Authorize]
 
     public class Uc502Controller(
-
         IDeviceService deviceService,
         IUc502Service uc502ModbusService,
         ISoilParameterService soilParameterService,
         IUserContext userContext,
         IWet150Sdi12MetadataService metadataService,
         IApiKeyIngestionHandler ingestionHandler,
-        ITelegramService telegram) : ControllerBase
+        ITelegramService telegram,
+        IDeprecatedEndpointNotifier deprecatedNotifier,
+        ILogger<Uc502Controller> logger) : ControllerBase
     {
 
         private readonly IDeviceService _deviceService = deviceService ?? throw new ArgumentNullException(nameof(deviceService));
@@ -41,6 +42,8 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IWet150Sdi12MetadataService _metadataService = metadataService ?? throw new ArgumentNullException(nameof(metadataService));
         private readonly IApiKeyIngestionHandler _ingestionHandler = ingestionHandler ?? throw new ArgumentNullException(nameof(ingestionHandler));
         private readonly ITelegramService _telegram = telegram ?? throw new ArgumentNullException(nameof(telegram));
+        private readonly IDeprecatedEndpointNotifier _deprecatedNotifier = deprecatedNotifier ?? throw new ArgumentNullException(nameof(deprecatedNotifier));
+        private readonly ILogger<Uc502Controller> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -54,46 +57,6 @@ namespace Kk.Kharts.Api.Controllers
             "yyyy-MM-ddTHH:mm:ss.fffK",
             "yyyy-MM-ddTHH:mm:ss.fffffffK"
         ];
-
-
-        private async Task NotifyDeprecatedUsageAsync(string endpoint, string? devEui = null)
-        {
-            var normalizedDevEui = string.IsNullOrWhiteSpace(devEui)
-                ? null
-                : DevEuiNormalizer.Normalize(devEui);
-
-
-            Device? device = null;
-
-            if (!string.IsNullOrWhiteSpace(normalizedDevEui))
-            {
-                try
-                {
-                    device = await _deviceService.GetDeviceByDevEuiApiKeyInternalAsync(normalizedDevEui);
-                }
-                catch
-                {
-                    // Ignoré: on continue sans enrichissement si l'accès échoue
-                }
-            }
-
-
-            var description = device?.Description ?? "(sans description)";
-            var companyName = device?.Company?.Name ?? device?.CompanyId.ToString() ?? "(entreprise inconnue)";
-            var location = string.IsNullOrWhiteSpace(device?.InstallationLocation)
-                ? "(localisation non renseignée)"
-                : device!.InstallationLocation;
-
-
-            var msg = $"⚠️ Endpoint obsolète appelé : {endpoint}\n" +
-                      $"DevEui : {normalizedDevEui ?? "(non fourni)"}\n" +
-                      $"Description : {description}\n" +
-                      $"Entreprise : {companyName}\n" +
-                      $"Site d’installation : {location}\n" +
-                      $"Horodatage : {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-
-            await _telegram.SendToDebugTopicAsync(msg);
-        }
 
 
         [Authorize]
@@ -124,7 +87,13 @@ namespace Kk.Kharts.Api.Controllers
 
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
-            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp);
+            var prep = await _ingestionHandler.PrepareAsync(
+                this,
+                entity.DevEui,
+                "Mesure déjà reçue... [UC502]",
+                measurementTimestamp,
+                entity,
+                "<b>UC502 ▸ Wet150</b>");
 
             if (prep.ShouldShortCircuit)
                 return prep.ShortCircuitResult!;
@@ -166,7 +135,13 @@ namespace Kk.Kharts.Api.Controllers
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
 
-            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp);
+            var prep = await _ingestionHandler.PrepareAsync(
+                this,
+                entity.DevEui,
+                "Mesure déjà reçue... [UC502]",
+                measurementTimestamp,
+                entity,
+                "<b>UC502 ▸ Wet150 Multi</b>");
 
             if (prep.ShouldShortCircuit)
                 return prep.ShortCircuitResult!;
@@ -309,8 +284,6 @@ namespace Kk.Kharts.Api.Controllers
 
         [ApiKeyAuthorizeKk]
         [HttpPost("api/v1/uc502/modbus")]
-        //public async Task<IActionResult> PostModbusApiKey([FromRoute] string devEui, [FromBody] Uc502ModbusDataDTO entity)
-
         public async Task<IActionResult> PostModbusApiKey([FromBody] Uc502ModbusDataDTO entity)
         {
             if (!ModelState.IsValid)
@@ -318,7 +291,7 @@ namespace Kk.Kharts.Api.Controllers
 
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
-            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp);
+            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp, entity, "<b>UC502 ▸ Modbus</b>");
 
             if (prep.ShouldShortCircuit)
                 return prep.ShortCircuitResult!;
@@ -435,7 +408,7 @@ namespace Kk.Kharts.Api.Controllers
             }
             finally
             {
-                await NotifyDeprecatedUsageAsync("GET api/v1/Uc502/GetModbusByDevEui", devEui);
+                await _deprecatedNotifier.NotifyAsync("GET api/v1/Uc502/GetModbusByDevEui", devEui);
             }
         }
 
@@ -452,7 +425,7 @@ namespace Kk.Kharts.Api.Controllers
             }
 
             entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui);
-            await NotifyDeprecatedUsageAsync("POST api/ApiKey/v1/Uc502FromUg65WithApiKey/Wet150", entity.DevEui);
+            await _deprecatedNotifier.NotifyAsync("POST api/ApiKey/v1/Uc502FromUg65WithApiKey/Wet150", entity.DevEui);
             return await ProcessPostWet150(entity, company);
         }
 
@@ -465,12 +438,12 @@ namespace Kk.Kharts.Api.Controllers
         {
             if (HttpContext.Items["Company"] is not Company company)
             {
-                return Unauthorized(new { message = "Entreprise non trouvée dans le contexto." });
+                return Unauthorized(new { message = "Entreprise non trouvée dans le contexte." });
             }
 
 
             entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui);
-            //await NotifyDeprecatedUsageAsync("POST api/v1/Uc502/ApiKey/Wet150/SDI-12", entity.DevEui);
+            await _deprecatedNotifier.NotifyAsync("POST api/v1/Uc502/ApiKey/Wet150/SDI-12", entity.DevEui);
             return await ProcessPostWet150(entity, company);
         }
 
@@ -498,7 +471,7 @@ namespace Kk.Kharts.Api.Controllers
             }
             finally
             {
-                await NotifyDeprecatedUsageAsync("GET api/v1/Uc502/GetWet150ByDevEui", devEui);
+                await _deprecatedNotifier.NotifyAsync("GET api/v1/Uc502/GetWet150ByDevEui", devEui);
             }
         }
 
@@ -511,14 +484,13 @@ namespace Kk.Kharts.Api.Controllers
 
             var device = await _deviceService.GetDeviceByDevEuiAsync<DeviceDto>(entity.DevEui, company)
                         ?? throw new NotFoundExceptionKk("Aucun dispositif trouvé avec le DevEui fourni.");
-
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
 
             if (DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestamp))
             {
                 // Send notification to Doublons topic
-                await SendDuplicateNotificationAsync(device, measurementTimestamp, HttpContext.Request.Path);
+                await SendDuplicateNotificationAsync(device, measurementTimestamp, HttpContext.Request.Path, entity);
 
                 return StatusCode(StatusCodes.Status208AlreadyReported, new
                 {
@@ -530,7 +502,7 @@ namespace Kk.Kharts.Api.Controllers
             return Ok();
         }
 
-        private async Task SendDuplicateNotificationAsync(DeviceDto device, DateTime measurementTimestamp, string endpoint)
+        private async Task SendDuplicateNotificationAsync(DeviceDto device, DateTime measurementTimestamp, string endpoint, PayloadWet150FromUg65WithApiKeyDTO? payload = null)
         {
             try
             {
@@ -542,7 +514,8 @@ namespace Kk.Kharts.Api.Controllers
                     devEUI = device.DevEui,
                     timestamp = measurementTimestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"),
                     lastSendAt = device.LastSendAt,
-                    endpoint
+                    endpoint,
+                    payload
                 }, JsonOptions);
 
                 var message = $"""
@@ -567,7 +540,7 @@ namespace Kk.Kharts.Api.Controllers
             catch (Exception ex)
             {
                 // Log but don't fail the request if notification fails
-                Console.WriteLine($"[ERROR] Failed to send duplicate notification: {ex.Message}");
+                _logger.LogError(ex, "Failed to send duplicate notification for DevEui={DevEui}", device.DevEui);
             }
         }
 
@@ -594,7 +567,7 @@ namespace Kk.Kharts.Api.Controllers
             if (HttpContext.Items["Company"] is not Company company)
             {
                 // Caso não tenha empresa no contexto, retorna erro
-                return Unauthorized(new { message = "Entreprise non trouvée dans le contexto." });
+                return Unauthorized(new { message = "Entreprise non trouvée dans le contexte." });
             }
 
             // O DTO converte kkTimestamp (quando presente) para o Timestamp interno e ignora
@@ -609,14 +582,8 @@ namespace Kk.Kharts.Api.Controllers
 
             entity.DevEui = prep.NormalizedDevEui!;
             await _uc502Service.AddAsync(entity);
-            await NotifyDeprecatedUsageAsync(nameof(GetDataModbusDeviceOBS), entity.DevEui);
+            await _deprecatedNotifier.NotifyAsync("POST api/v1/Uc502/ApiKey/Wet150/KkLoRaDesktop", entity.DevEui);
             return Ok();
         }
-
-
-        //private static string NormalizeDevEui(string devEui)
-        //{
-        //    return string.IsNullOrWhiteSpace(devEui) ? devEui : devEui.Trim().ToUpperInvariant();
-        //}
     }
 }

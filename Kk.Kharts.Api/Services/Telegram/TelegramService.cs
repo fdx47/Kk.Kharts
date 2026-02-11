@@ -437,6 +437,32 @@ public sealed class TelegramService : ITelegramService
         }
     }
 
+    public async Task SetDebugBotCommandsAsync(CancellationToken ct = default)
+    {
+        var commands = new BotCommand[]
+        {
+            new() { Command = "help", Description = "Afficher l'aide" },
+            new() { Command = "staff", Description = "Ouvrir KropKontrol Staff" },
+            new() { Command = "miniappsetup", Description = "Configurer la Mini-App" },
+            new() { Command = "last", Description = "Dernières données" },
+            new() { Command = "lastseen", Description = "Capteurs silencieux" },
+            new() { Command = "offline", Description = "Capteurs hors ligne" }
+        };
+
+        try
+        {
+            await _debugBotClient.SetMyCommands(commands, cancellationToken: ct);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Debug bot commands configured successfully ({Count} commands)", commands.Length);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set debug bot commands");
+        }
+    }
+
     public async Task SetWebAppMenuButtonAsync(string text, string url, CancellationToken ct = default)
     {
         try
@@ -456,6 +482,28 @@ public sealed class TelegramService : ITelegramService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set bot menu button");
+        }
+    }
+
+    public async Task SetDebugWebAppMenuButtonAsync(string text, string url, CancellationToken ct = default)
+    {
+        try
+        {
+            var menuButton = new MenuButtonWebApp
+            {
+                Text = text,
+                WebApp = new WebAppInfo { Url = url }
+            };
+
+            await _debugBotClient.SetChatMenuButton(menuButton: menuButton, cancellationToken: ct);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Debug bot menu button configured for Mini App: {Url}", url);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set debug bot menu button");
         }
     }
 

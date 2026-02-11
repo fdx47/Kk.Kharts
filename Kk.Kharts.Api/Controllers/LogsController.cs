@@ -26,7 +26,7 @@ public class LogsController : ControllerBase
     {
         _logger = logger;
         // Usar o mesmo diretório do DebugBotController
-        _logsDirectory = Path.Combine(AppContext.BaseDirectory, "kklogs");
+        _logsDirectory = Path.Combine(AppContext.BaseDirectory, GlobalConstants.LogsDirectoryName);
 
         if (!Directory.Exists(_logsDirectory))
         {
@@ -320,6 +320,361 @@ public class LogsController : ControllerBase
             Source = source.Trim(),
             Message = message.Trim()
         };
+    }
+
+    /// <summary>
+    /// Retourne des statistiques analytiques détaillées extraites des fichiers de logs.
+    /// Inclut l'activité par utilisateur, par endpoint, par méthode HTTP, et par heure.
+    /// </summary>
+    /// <param name="date">Date au format yyyy-MM-dd (optionnel).</param>
+    /// <returns>Objet analytique complet.</returns>
+    [HttpGet("analytics")]
+    public IActionResult GetAnalytics([FromQuery] string? date = null)
+    {
+        try
+        {
+            var resolution = ResolveLogFile(date);
+            if (resolution is null)
+                return NotFound(new { message = "Aucun fichier de log trouvé." });
+
+            if (!System.IO.File.Exists(resolution.Path))
+                return NotFound(new { message = $"Fichier de logs introuvable pour la date : {date ?? resolution.DateDisplay}" });
+
+            var lines = System.IO.File.ReadAllLines(resolution.Path);
+            var analytics = BuildAnalytics(lines, resolution.DateDisplay);
+            return Ok(analytics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur lors du calcul des analytics");
+            return StatusCode(500, new { message = "Erreur interne", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Retourne la liste des dates disponibles dans le répertoire de logs.
+    /// </summary>
+    [HttpGet("available-dates")]
+    public IActionResult GetAvailableDates()
+    {
+        try
+        {
+            if (!Directory.Exists(_logsDirectory))
+                return Ok(new List<string>());
+
+            var dates = Directory.EnumerateFiles(_logsDirectory, "*.txt")
+                .Select(f => TryParseDateFromFileName(Path.GetFileNameWithoutExtension(f)))
+                .Where(d => d.HasValue)
+                .Select(d => d!.Value)
+                .OrderByDescending(d => d)
+                .Select(d => d.ToString("yyyy-MM-dd"))
+                .ToList();
+
+            return Ok(dates);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur lors de la récupération des dates disponibles");
+            return StatusCode(500, new { message = "Erreur interne", error = ex.Message });
+        }
+    }
+
+    private LogAnalyticsDto BuildAnalytics(string[] lines, string dateDisplay)
+    {
+        var users = new Dictionary<string, UserAnalyticsDto>(StringComparer.OrdinalIgnoreCase);
+        var endpointCounts = new Dictionary<string, EndpointAnalyticsDto>(StringComparer.OrdinalIgnoreCase);
+        var methodCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var hourlyActivity = new int[24];
+        var methodHourlyActivity = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+        var endpointHourlyTotals = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+        var endpointHourlyByUser = new Dictionary<string, Dictionary<string, int[]>>(StringComparer.OrdinalIgnoreCase);
+        var statusCodes = new Dictionary<string, int>();
+
+        string? currentUser = null;
+        string? currentMethod = null;
+        string? currentEndpoint = null;
+        DateTime? currentTimestamp = null;
+
+        int totalEntries = 0;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrEmpty(line) || line.StartsWith("-----")) continue;
+
+            // 👤 Utilisateur
+            if (line.StartsWith("\U0001F464", StringComparison.Ordinal) || line.StartsWith("Utilisateur", StringComparison.OrdinalIgnoreCase))
+            {
+                // Commit previous entry
+                CommitLogEntry(ref currentUser, ref currentMethod, ref currentEndpoint, ref currentTimestamp,
+                    users, endpointCounts, methodCounts, hourlyActivity, methodHourlyActivity,
+                    endpointHourlyTotals, endpointHourlyByUser, ref totalEntries);
+
+                currentUser = ExtractValue(line);
+                currentMethod = null;
+                currentEndpoint = null;
+                currentTimestamp = null;
+            }
+            // 📥 Méthode HTTP
+            else if (line.StartsWith("\U0001F4E5", StringComparison.Ordinal) || line.StartsWith("M\u00e9thode", StringComparison.OrdinalIgnoreCase) || line.StartsWith("Methode", StringComparison.OrdinalIgnoreCase))
+            {
+                currentMethod = ExtractValue(line).ToUpperInvariant();
+            }
+            // 🌐 Endpoint
+            else if (line.StartsWith("\U0001F310", StringComparison.Ordinal) || line.StartsWith("Endpoint", StringComparison.OrdinalIgnoreCase))
+            {
+                currentEndpoint = ExtractValue(line);
+            }
+            // 🕒 Timestamp
+            else if (line.StartsWith("\U0001F552", StringComparison.Ordinal) || line.StartsWith("@ Heure", StringComparison.OrdinalIgnoreCase) || line.StartsWith("Heure", StringComparison.OrdinalIgnoreCase))
+            {
+                var tsValue = ExtractValue(line).Replace("UTC", "", StringComparison.OrdinalIgnoreCase).Trim();
+                if (DateTime.TryParseExact(tsValue, "dd/MM/yy HH:mm:ss", CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var ts))
+                {
+                    currentTimestamp = ts;
+                }
+            }
+        }
+
+        // Commit last entry
+        CommitLogEntry(ref currentUser, ref currentMethod, ref currentEndpoint, ref currentTimestamp,
+            users, endpointCounts, methodCounts, hourlyActivity, methodHourlyActivity,
+            endpointHourlyTotals, endpointHourlyByUser, ref totalEntries);
+
+        // Build response
+        var userList = users.Values
+            .OrderByDescending(u => u.TotalRequests)
+            .ToList();
+
+        var endpointList = endpointCounts.Values
+            .OrderByDescending(e => e.Count)
+            .Take(30)
+            .ToList();
+
+        var methodList = methodCounts
+            .Select(m => new MethodAnalyticsDto { Method = m.Key, Count = m.Value })
+            .OrderByDescending(m => m.Count)
+            .ToList();
+
+        var hourlyList = hourlyActivity
+            .Select((count, hour) => new HourlyAnalyticsDto { Hour = hour, Label = $"{hour:D2}h", Count = count })
+            .ToList();
+
+        var methodHourlyList = methodHourlyActivity
+            .Select(kvp => new MethodHourlyAnalyticsDto
+            {
+                Method = kvp.Key.ToUpperInvariant(),
+                HourlyCounts = (int[])kvp.Value.Clone()
+            })
+            .ToList();
+
+        var endpointHourlyBreakdown = endpointHourlyTotals
+            .Select(kvp => new EndpointHourlyAnalyticsDto
+            {
+                Endpoint = kvp.Key,
+                TotalHourlyCounts = (int[])kvp.Value.Clone(),
+                Users = endpointHourlyByUser.TryGetValue(kvp.Key, out var userDict)
+                    ? userDict.Select(u => new UserEndpointHourlyDto
+                        {
+                            User = u.Key,
+                            HourlyCounts = (int[])u.Value.Clone()
+                        })
+                        .OrderByDescending(u => u.HourlyCounts.Sum())
+                        .ToList()
+                    : new List<UserEndpointHourlyDto>()
+            })
+            .ToList();
+
+        // Peak hour
+        var peakHour = hourlyActivity.Select((count, hour) => new { hour, count }).OrderByDescending(x => x.count).First();
+
+        return new LogAnalyticsDto
+        {
+            Date = dateDisplay,
+            TotalRequests = totalEntries,
+            UniqueUsers = users.Count,
+            UniqueEndpoints = endpointCounts.Count,
+            PeakHour = $"{peakHour.hour:D2}h",
+            PeakHourRequests = peakHour.count,
+            Users = userList,
+            Endpoints = endpointList,
+            Methods = methodList,
+            HourlyActivity = hourlyList,
+            MethodHourlyActivity = methodHourlyList,
+            EndpointHourlyBreakdown = endpointHourlyBreakdown
+        };
+    }
+
+    private static void CommitLogEntry(
+        ref string? user, ref string? method, ref string? endpoint, ref DateTime? timestamp,
+        Dictionary<string, UserAnalyticsDto> users,
+        Dictionary<string, EndpointAnalyticsDto> endpoints,
+        Dictionary<string, int> methods,
+        int[] hourlyActivity,
+        Dictionary<string, int[]> methodHourlyActivity,
+        Dictionary<string, int[]> endpointHourlyTotals,
+        Dictionary<string, Dictionary<string, int[]>> endpointHourlyByUser,
+        ref int totalEntries)
+    {
+        if (string.IsNullOrWhiteSpace(user) && string.IsNullOrWhiteSpace(endpoint)) return;
+
+        totalEntries++;
+        var userName = user ?? "Inconnu";
+        var methodName = method ?? "GET";
+        var endpointName = endpoint ?? "N/A";
+
+        // User stats
+        if (!users.TryGetValue(userName, out var userStats))
+        {
+            userStats = new UserAnalyticsDto { Name = userName };
+            users[userName] = userStats;
+        }
+        userStats.TotalRequests++;
+        userStats.Methods[methodName] = userStats.Methods.GetValueOrDefault(methodName) + 1;
+
+        if (!userStats.Endpoints.TryGetValue(endpointName, out _))
+            userStats.Endpoints[endpointName] = 0;
+        userStats.Endpoints[endpointName]++;
+
+        if (timestamp.HasValue)
+        {
+            if (userStats.FirstSeenUtc is null || timestamp < userStats.FirstSeenUtc)
+                userStats.FirstSeenUtc = timestamp;
+            if (userStats.LastSeenUtc is null || timestamp > userStats.LastSeenUtc)
+                userStats.LastSeenUtc = timestamp;
+
+            var hour = timestamp.Value.Hour;
+            if (hour >= 0 && hour < 24)
+            {
+                hourlyActivity[hour]++;
+
+                if (!methodHourlyActivity.TryGetValue(methodName, out var methodHours))
+                {
+                    methodHours = new int[24];
+                    methodHourlyActivity[methodName] = methodHours;
+                }
+                methodHours[hour]++;
+            }
+
+            // Hourly breakdown per user
+            userStats.HourlyActivity[hour]++;
+
+            if (!endpointHourlyTotals.TryGetValue(endpointName, out var endpointTotals))
+            {
+                endpointTotals = new int[24];
+                endpointHourlyTotals[endpointName] = endpointTotals;
+            }
+            endpointTotals[hour]++;
+
+            if (!endpointHourlyByUser.TryGetValue(endpointName, out var endpointUsersDict))
+            {
+                endpointUsersDict = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+                endpointHourlyByUser[endpointName] = endpointUsersDict;
+            }
+
+            if (!endpointUsersDict.TryGetValue(userName, out var endpointUserHours))
+            {
+                endpointUserHours = new int[24];
+                endpointUsersDict[userName] = endpointUserHours;
+            }
+            endpointUserHours[hour]++;
+        }
+
+        // Endpoint stats
+        if (!endpoints.TryGetValue(endpointName, out var epStats))
+        {
+            epStats = new EndpointAnalyticsDto { Endpoint = endpointName };
+            endpoints[endpointName] = epStats;
+        }
+        epStats.Count++;
+        epStats.Methods[methodName] = epStats.Methods.GetValueOrDefault(methodName) + 1;
+        if (!epStats.Users.Contains(userName))
+            epStats.Users.Add(userName);
+
+        // Method stats
+        methods[methodName] = methods.GetValueOrDefault(methodName) + 1;
+
+        // Reset
+        user = null;
+        method = null;
+        endpoint = null;
+        timestamp = null;
+    }
+
+    private static string ExtractValue(string line)
+    {
+        var colonIndex = line.IndexOf(':');
+        return colonIndex == -1 ? line.Trim() : line[(colonIndex + 1)..].Trim();
+    }
+
+    // ── Analytics DTOs ──────────────────────────────────────────────────
+
+    private sealed class LogAnalyticsDto
+    {
+        public string Date { get; set; } = string.Empty;
+        public int TotalRequests { get; set; }
+        public int UniqueUsers { get; set; }
+        public int UniqueEndpoints { get; set; }
+        public string PeakHour { get; set; } = string.Empty;
+        public int PeakHourRequests { get; set; }
+        public List<UserAnalyticsDto> Users { get; set; } = new();
+        public List<EndpointAnalyticsDto> Endpoints { get; set; } = new();
+        public List<MethodAnalyticsDto> Methods { get; set; } = new();
+        public List<HourlyAnalyticsDto> HourlyActivity { get; set; } = new();
+        public List<MethodHourlyAnalyticsDto> MethodHourlyActivity { get; set; } = new();
+        public List<EndpointHourlyAnalyticsDto> EndpointHourlyBreakdown { get; set; } = new();
+    }
+
+    private sealed class UserAnalyticsDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public int TotalRequests { get; set; }
+        public DateTime? FirstSeenUtc { get; set; }
+        public DateTime? LastSeenUtc { get; set; }
+        public Dictionary<string, int> Methods { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, int> Endpoints { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public int[] HourlyActivity { get; set; } = new int[24];
+    }
+
+    private sealed class EndpointAnalyticsDto
+    {
+        public string Endpoint { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public Dictionary<string, int> Methods { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<string> Users { get; set; } = new();
+    }
+
+    private sealed class MethodAnalyticsDto
+    {
+        public string Method { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
+    private sealed class HourlyAnalyticsDto
+    {
+        public int Hour { get; set; }
+        public string Label { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
+    private sealed class MethodHourlyAnalyticsDto
+    {
+        public string Method { get; set; } = string.Empty;
+        public int[] HourlyCounts { get; set; } = new int[24];
+    }
+
+    private sealed class EndpointHourlyAnalyticsDto
+    {
+        public string Endpoint { get; set; } = string.Empty;
+        public int[] TotalHourlyCounts { get; set; } = new int[24];
+        public List<UserEndpointHourlyDto> Users { get; set; } = new();
+    }
+
+    private sealed class UserEndpointHourlyDto
+    {
+        public string User { get; set; } = string.Empty;
+        public int[] HourlyCounts { get; set; } = new int[24];
     }
 
     private string? GetMostRecentLogFile()

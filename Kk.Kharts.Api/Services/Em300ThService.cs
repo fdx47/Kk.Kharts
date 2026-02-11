@@ -56,10 +56,8 @@ namespace Kk.Kharts.Api.Services
         }
 
 
-        //public async Task<Em300Th> AddApiKeyAsync<T>(T entity, int deviceId) where T : class, IDeviceData
         public async Task<Em300Th> AddApiKeyAsync<T>(T entity, string devEui) where T : class, IDeviceDataEm300Th
         {
-            //Device device;
             var device2 = await _deviceRepository.GetDeviceByIdApiKeyAsync(devEui);
 
             if (entity.Battery >= 99.9f || entity.Battery == 0.0f)

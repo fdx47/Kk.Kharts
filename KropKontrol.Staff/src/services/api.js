@@ -241,7 +241,12 @@ export const deviceService = {
     const response = await apiClient.get('/api/v1/devices')
     return ensureOk(response).data
   },
-  
+
+  async getModels() {
+    const response = await apiClient.get('/api/v1/devices/models')
+    return ensureOk(response).data
+  },
+
   async getStats() {
     try {
       const devices = await this.getAll()
@@ -467,6 +472,25 @@ export const logsService = {
       const url = date ? `/api/v1/dashboard/users?date=${date}` : '/api/v1/dashboard/users'
       const response = await apiClient.get(url)
       return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  async fetchAnalytics(date = null) {
+    try {
+      const url = date ? `/api/v1/logs/analytics?date=${date}` : '/api/v1/logs/analytics'
+      const response = await apiClient.get(url)
+      return ensureOk(response).data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  async fetchAvailableDates() {
+    try {
+      const response = await apiClient.get('/api/v1/logs/available-dates')
+      return ensureOk(response).data
     } catch (error) {
       throw error
     }

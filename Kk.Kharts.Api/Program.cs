@@ -87,7 +87,6 @@ namespace Kk.Kharts.Api
 
             builder.Services.AddHostedService<StartupNotificationService>();
 
-            // builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IUserContext, UserContext>();
            
@@ -111,6 +110,7 @@ namespace Kk.Kharts.Api
             builder.Services.AddHostedService<DeviceMonitorService>();
 
             builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+            builder.Services.AddScoped<IDashboardService, DashboardService>();
 
             builder.Services.AddScoped<IDeviceModelRepository, DeviceModelRepository>();
             builder.Services.AddScoped<IDeviceModelService, DeviceModelService>();
@@ -138,6 +138,7 @@ namespace Kk.Kharts.Api
             builder.Services.AddScoped<IVpnProfileService, VpnProfileService>();
 
             builder.Services.AddScoped<IActivityService, ActivityService>();
+            builder.Services.AddScoped<IDeprecatedEndpointNotifier, DeprecatedEndpointNotifier>();
 
             builder.Services.AddScoped<ISystemStatusService, SystemStatusService>();
 
@@ -169,7 +170,7 @@ namespace Kk.Kharts.Api
             // Serviço para inicializar o banco de dados
             builder.Services.AddTransient<SeedDb>();
 
-            builder.Services.AddScoped<JwtService>();
+            builder.Services.AddScoped<IJwtService, JwtService>();
 
             // Configuração da autenticação usando JWT
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -193,7 +194,9 @@ namespace Kk.Kharts.Api
                  {
                      OnAuthenticationFailed = context =>
                      {
-                         Console.WriteLine($"Erreur d'authentification JWT : {context.Exception.Message}");
+                         var jwtLogger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                             .CreateLogger("JwtAuthentication");
+                         jwtLogger.LogWarning(context.Exception, "Erreur d'authentification JWT");
                          return Task.CompletedTask;
                      }
                  };

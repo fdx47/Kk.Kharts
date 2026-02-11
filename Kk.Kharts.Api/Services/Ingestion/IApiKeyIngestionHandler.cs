@@ -8,5 +8,7 @@ public interface IApiKeyIngestionHandler
         ControllerBase controller,
         string? rawDevEui,
         string duplicateMessage,
-        DateTime? measurementTimestampUtc = null);
+        DateTime? measurementTimestampUtc = null,
+        object? payload = null,
+        string? duplicateContext = null);
 }

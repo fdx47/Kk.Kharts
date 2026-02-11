@@ -1,14 +1,10 @@
-﻿using Kk.Kharts.Api.Data;
-using Kk.Kharts.Api.Errors.Kk.Kharts.Api.Errors;
-using Kk.Kharts.Api.Services;
+﻿using Kk.Kharts.Api.Errors.Kk.Kharts.Api.Errors;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Utility.Constants;
 
 using Kk.Kharts.Shared.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Globalization;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Kk.Kharts.Api.Controllers
@@ -17,22 +13,25 @@ namespace Kk.Kharts.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
-        private readonly JwtService _jwtService;
+        private readonly IJwtService _jwtService;
         private readonly ITemporaryAccessTokenService _temporaryAccessTokenService;
+        private readonly ILogger<AuthController> _logger;
         private readonly int _refreshTokenExpirationDays;
 
         public AuthController(
-            AppDbContext context,
-            JwtService jwtService,
+            IUserService userService,
+            IJwtService jwtService,
             ITemporaryAccessTokenService temporaryAccessTokenService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<AuthController> logger)
         {
-            _context = context;
+            _userService = userService;
             _jwtService = jwtService;
             _temporaryAccessTokenService = temporaryAccessTokenService;
             _configuration = configuration;
+            _logger = logger;
             _refreshTokenExpirationDays = configuration.GetValue<int>("Jwt:RefreshTokenExpirationDays", 1);
         }
 
@@ -55,13 +54,11 @@ namespace Kk.Kharts.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(new { Message = "Données invalides.", IsSuccess = false });
 
-            var utilisateur = await _context.Users
-                .AsNoTracking()
-                .SingleOrDefaultAsync(u => u.Email == login.Email);
+            var utilisateur = await _userService.GetUserByEmailAsync(login.Email);
 
             if (utilisateur == null)
             {
-                throw new InvalidLoginExceptionKk($"Email ou mot de passe invalide.", $"Email invalide\n• Email: {login.Email}\n• Password: {login.Password}");
+                throw new InvalidLoginExceptionKk($"Email ou mot de passe invalide.", $"Email invalide\n• Email: {login.Email}");
             }
 
 
@@ -99,29 +96,6 @@ namespace Kk.Kharts.Api.Controllers
 
 
 
-            //// 🔐 Verifica se é uma conta demo no formato ddmmyy@kropkontrol.com
-            //if (Regex.IsMatch(login.Email, @"^\d{6}@kropkontrol\.com$"))
-            //{
-            //    var datePart = login.Email.Substring(0, 6);
-
-            //    if (!DateTime.TryParseExact(datePart, "ddMMyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime emailDate))
-            //    {
-            //        return BadRequest(new { Message = "Format de compte demo invalide.", IsSuccess = false });
-            //    }
-
-            //    var agoraUtc = DateTime.UtcNow;
-            //    var fimDoDia = emailDate.Date.AddDays(1).AddTicks(-1); // 23:59:59.9999999 UTC
-
-            //    if (agoraUtc > fimDoDia)
-            //    {
-            //        return Unauthorized(new
-            //        {
-            //            Message = $"⛔ Accès expiré : la démo du {emailDate:dd/MM/yyyy} n’est plus valable.",
-            //            IsSuccess = false
-            //        });
-            //    }
-            //}
-
             var httpCancellation = HttpContext.RequestAborted;
             var passwordMatched = BCrypt.Net.BCrypt.Verify(login.Password, utilisateur.Password);
             var usedTemporaryPassword = false;
@@ -132,7 +106,7 @@ namespace Kk.Kharts.Api.Controllers
                 {
                     throw new InvalidLoginExceptionKk(
                         $"Email ou mot de passe invalide.",
-                        $"Tentative de mot de passe temporaire sur compte Root\n• Email: {login.Email}");
+                        $"Tentative d'accès refusée sur compte Root\n• Email: {login.Email}");
                 }
 
                 var tempResult = await _temporaryAccessTokenService.TryConsumeAsync(
@@ -144,7 +118,7 @@ namespace Kk.Kharts.Api.Controllers
                 {
                     throw new InvalidLoginExceptionKk(
                         $"Email ou mot de passe invalide.",
-                        $"Mot de passe incorrect (login ou token)\n• Email: {login.Email}");
+                        $"Échec d'authentification (mot de passe ou token)\n• Email: {login.Email}");
                 }
 
                 usedTemporaryPassword = true;
@@ -164,58 +138,11 @@ namespace Kk.Kharts.Api.Controllers
             utilisateur.LastIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             utilisateur.LastUserAgent = Request.Headers["User-Agent"].ToString();
 
-            _context.Users.Update(utilisateur);
-            await _context.SaveChangesAsync();
-
-
-            //// Enviar mensagem para Telegram após login bem-sucedido
-            //string telegramMessage = $"""
-            //                         🔐 Connexion réussie
-
-            //                         • Utilisateur : {utilisateur.Email}
-            //                         • ID : {utilisateur.Id}
-            //                         • Heure : {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss} UTC
-            //                         • Jeton JWT généré avec succès.
-            //                        """;
-
-            //await _telegram.SendFormattedMessageAsync(telegramMessage, TelegramNotifier.TelegramParseMode.MarkdownV2);
-
-            // Atualiza dados do usuário... para as stats
-            _context.Users.Update(utilisateur);
-            await _context.SaveChangesAsync();
-
-            var queryJson = Request.Query.Count > 0
-                    ? JsonSerializer.Serialize(
-                        Request.Query.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString()),
-                        new JsonSerializerOptions { WriteIndented = true })
-                    : "{}";
+            await _userService.UpdateUserAuthDataAsync(utilisateur);
 
             var authMode = usedTemporaryPassword ? "🔑 Accès temporaire" : "🔐 Mot de passe standard";
-            var logMessage = $"""
-                      👤 Utilisateur connecté : {utilisateur.Nom}
-                      🌐 Endpoint appelé : {Request.Path}
-                      📥 Méthode HTTP : {Request.Method}
-                      🧾 Paramètres :
-                      {queryJson}
-                      🕒 Heure : {DateTime.UtcNow:dd/MM/yy HH:mm:ss} UTC
-
-                      {authMode}
-                      ----------------------------------------------------------------------
-                      """;
-
-            try
-            {
-                var logDir = Path.Combine(AppContext.BaseDirectory, "kklogs");
-                Directory.CreateDirectory(logDir);
-                var fileName = DateTime.UtcNow.ToString("ddMMyy") + ".txt";
-                var filePath = Path.Combine(logDir, fileName);
-                await System.IO.File.AppendAllTextAsync(filePath, logMessage + Environment.NewLine);
-            }
-            catch
-            {
-                // todo Tratar erros de log
-            }
-
+            _logger.LogInformation("Connexion utilisateur : {UserName} | Endpoint : {Endpoint} | Méthode : {Method} | Mode : {AuthMode}",
+                utilisateur.Nom, Request.Path.ToString(), Request.Method, authMode);
 
             return Ok(new AuthResponseDTO
             {
@@ -251,7 +178,7 @@ namespace Kk.Kharts.Api.Controllers
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDTO request)
         {
             // 1. Buscar o usuário com base no refresh token enviado
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.RefreshToken == request.RefreshToken);
+            var user = await _userService.GetUserByRefreshTokenAsync(request.RefreshToken);
 
             if (user == null)
             {
@@ -297,8 +224,7 @@ namespace Kk.Kharts.Api.Controllers
             user.LastIpAddress = currentIpAddress;
             user.LastUserAgent = currentUserAgent;
 
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+            await _userService.UpdateUserAuthDataAsync(user);
 
             // 6. Retornar resposta com os novos tokens
             return Ok(new AuthResponseDTO

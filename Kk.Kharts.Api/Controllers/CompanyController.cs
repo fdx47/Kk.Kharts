@@ -1,5 +1,4 @@
 ﻿using Kk.Kharts.Api.Services.IService;
-using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Shared.DTOs.Companies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,29 +16,14 @@ namespace Kk.Kharts.Api.Controllers
         private readonly ICompanyService _companyService;
         private readonly IUserContext _userContext;
         private readonly IDeviceService _deviceService;
-        private readonly ITelegramService _telegram;
         private readonly IHashIdService _hashIdService;
 
-        public CompanyController(ICompanyService companyService, IUserContext userContext, IDeviceService deviceService, ITelegramService telegram, IHashIdService hashIdService)
+        public CompanyController(ICompanyService companyService, IUserContext userContext, IDeviceService deviceService, IHashIdService hashIdService)
         {
             _companyService = companyService;
             _userContext = userContext;
             _deviceService = deviceService;
-            _telegram = telegram;
             _hashIdService = hashIdService;
-        }
-
-        private async Task NotifyDeprecatedUsageAsync(string endpoint, string? additionalInfo = null)
-        {
-            var message = $"⚠️ Endpoint obsolète appelé : {endpoint}\n" +
-                          $"Horodatage : {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-
-            if (!string.IsNullOrWhiteSpace(additionalInfo))
-            {
-                message += $"\nContexte : {additionalInfo}";
-            }
-
-            await _telegram.SendToDebugTopicAsync(message);
         }
 
 
@@ -165,17 +149,6 @@ namespace Kk.Kharts.Api.Controllers
             return Ok(updated);
         }
 
-        // DELETE /api/v1/companies/{id}
-        //[Authorize(Roles = "Root")]
-        //[HttpDelete("{id}")]
-        //public async Task<IActionResult> Delete(int id)
-        //{
-        //    var success = await _companyService.DeleteCompanyAsync(id);
-        //    if (!success)
-        //        return NotFound(new { message = "Entreprise non trouvée pour suppression." });
-
-        //    return NoContent();
-        //}
 
         /// <summary>
         /// Désactive une entreprise par ID numérique.
@@ -216,22 +189,6 @@ namespace Kk.Kharts.Api.Controllers
             return NoContent();
         }
 
-
-        //[Authorize(Roles = "Root")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //[HttpGet("api/v1/Company/GetAll")]
-        //public async Task<IActionResult> GetAllOld()
-        //{
-        //    try
-        //    {
-        //        var companies = await _companyService.GetAllCompaniesAsyncOLD();
-        //        return Ok(companies);
-        //    }
-        //    finally
-        //    {
-        //        await NotifyDeprecatedUsageAsync("GET api/v1/Company/GetAll");
-        //    }
-        //}
 
     }
 }

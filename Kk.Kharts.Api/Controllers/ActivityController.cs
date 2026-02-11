@@ -15,10 +15,7 @@ public class ActivityController : ControllerBase
 {
     private readonly IActivityService _activityService;
 
-    public ActivityController(IActivityService activityService)
-    {
-        _activityService = activityService;
-    }
+    public ActivityController(IActivityService activityService) => _activityService = activityService;
 
     /// <summary>
     /// Récupère les activités récentes du système.

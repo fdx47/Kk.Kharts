@@ -2,6 +2,7 @@ using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Api.Utility.Wet150;
 using Kk.Kharts.Shared.DTOs.UC502.Wet150;
+using Microsoft.Extensions.Logging;
 
 namespace Kk.Kharts.Api.Utils.Wet150;
 
@@ -19,11 +20,12 @@ public static class SdiToVwcEc
         string devEui,
         IDeviceService deviceService,
         ITelegramService telegram,
-        IKkTimeZoneService timeZoneService)
+        IKkTimeZoneService timeZoneService,
+        ILoggerFactory loggerFactory)
     {
         var parseResult = Sdi12Parser.Parse(payloadJson.SDI12_1);
 
-        var notificationService = new Sdi12NotificationService(deviceService, telegram, timeZoneService);
+        var notificationService = new Sdi12NotificationService(deviceService, telegram, timeZoneService, loggerFactory.CreateLogger<Sdi12NotificationService>());
         await notificationService.NotifyIfNeededAsync(parseResult, payloadJson, timestamp, devEui);
 
         if (!parseResult.ShouldSaveToDatabase)

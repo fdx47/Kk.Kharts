@@ -8,7 +8,5 @@
         public const string NiveauAcces  = "niveau_acces";
         public const string SocieteId = "societe_id";
         public const string LastLogin = "last_login";
-
-        //public const string Admin = nameof(Admin);
     }
 }

@@ -105,5 +105,24 @@ namespace Kk.Kharts.Api.Services
         {
             return Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$");
         }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<User?> GetUserByRefreshTokenAsync(string refreshToken)
+        {
+            return await _context.Users
+                .SingleOrDefaultAsync(u => u.RefreshToken == refreshToken);
+        }
+
+        public async Task UpdateUserAuthDataAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
     }
 }

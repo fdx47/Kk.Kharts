@@ -11,7 +11,8 @@ namespace Kk.Kharts.Api.Utils.Wet150;
 public sealed class Sdi12NotificationService(
     IDeviceService deviceService,
     ITelegramService telegram,
-    IKkTimeZoneService timeZoneService)
+    IKkTimeZoneService timeZoneService,
+    ILogger<Sdi12NotificationService> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -99,7 +100,7 @@ public sealed class Sdi12NotificationService(
     {
         if (type == NotificationType.CorruptedData || type == NotificationType.InvalidSensorValues)
         {
-            Console.WriteLine($"[WARN] SDI12 notification: {type}");
+            logger.LogWarning("SDI12 notification: {NotificationType}", type);
             await telegram.SendToErrorsTopicAsync(message);
         }
         else if (type == NotificationType.Debug)

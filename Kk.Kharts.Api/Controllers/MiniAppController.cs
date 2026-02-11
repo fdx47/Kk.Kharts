@@ -1,5 +1,6 @@
 using Kk.Kharts.Api.Data;
 using Kk.Kharts.Api.Services;
+using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Shared.Entities;
 using Kk.Kharts.Shared.Enums;
@@ -24,7 +25,7 @@ public class MiniAppController(
     ITelegramUserService telegramUserService,
     ITelegramService telegramService,
     IDashboardConfigService dashboardConfigService,
-    JwtService jwtService,
+    IJwtService jwtService,
     ILogger<MiniAppController> logger) : ControllerBase
 {
     /// <summary>

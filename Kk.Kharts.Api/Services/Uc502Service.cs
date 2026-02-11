@@ -25,13 +25,17 @@ namespace Kk.Kharts.Api.Services
         IUserContext userContext,
         IDeviceService deviceService,
         ITelegramService telegram,
-        IKkTimeZoneService timeZoneService) : IUc502Service
+        IKkTimeZoneService timeZoneService,
+        ILogger<Uc502Service> logger,
+        ILoggerFactory loggerFactory) : IUc502Service
     {
         private readonly IUc502Repository _uc502Repository = repository;
         private readonly IDeviceRepository _deviceRepository = deviceRepository;
         private readonly IUserContext _userContext = userContext;
         private readonly IDeviceService _deviceService = deviceService;
         private readonly IKkTimeZoneService _timeZoneService = timeZoneService;
+        private readonly ILogger<Uc502Service> _logger = logger;
+        private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
 
         public async Task<Uc502Wet150ResponseDTO> GetFilteredDataByDeviEuiAsync(string devEui, DateTime startDate, DateTime endDate, AuthenticatedUserDto authenticatedUser)
@@ -45,7 +49,7 @@ namespace Kk.Kharts.Api.Services
             }
 
             // Recupera os dados filtrados de Uc502Wet150 pelo DevEui
-            var data = await _uc502Repository.GetUc502Wet150DataByDevEuiAsync(devEui, authenticatedUser);
+            var data = _uc502Repository.GetUc502Wet150DataByDevEui(devEui, authenticatedUser);
 
             // Filtra os dados no banco com base no intervalo de datas
             var filteredData = data
@@ -167,12 +171,12 @@ namespace Kk.Kharts.Api.Services
 
                 //Console.WriteLine($"\nPayload - Timestamp: {payload.Timestamp}  DevEUI: {payload.DevEui}    SDI12: {payload.SDI12}", ConsoleColor.Cyan);
 
-                listaResultados = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, measurementTimestamp, payload.DevEui, _deviceService, telegram, _timeZoneService);
+                listaResultados = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, measurementTimestamp, payload.DevEui, _deviceService, telegram, _timeZoneService, _loggerFactory);
 
                 // Se a lista estiver vazia (valores inválidos), não salvar no banco
                 if (listaResultados == null || listaResultados.Count == 0)
                 {
-                    Console.WriteLine($"[INFO] Dados ignorados para DevEui: {payload.DevEui} - valores inválidos detectados");
+                    _logger.LogInformation("Dados ignorados para DevEui: {DevEui} - valores inválidos detectados", payload.DevEui);
                     return null!;
                 }
 
@@ -638,12 +642,12 @@ namespace Kk.Kharts.Api.Services
                 Timestamp = timestamp
             };
 
-            var result = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, timestamp, devEui, _deviceService, telegram, _timeZoneService);
+            var result = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, timestamp, devEui, _deviceService, telegram, _timeZoneService, _loggerFactory);
 
             // Se a lista estiver vazia (valores inválidos), não adicionar à lista
             if (result == null || result.Count == 0)
             {
-                Console.WriteLine($"[INFO] Dados ignorados para DevEui: {devEui} - valores inválidos detectados");
+                _logger.LogInformation("Dados ignorados para DevEui: {DevEui} - valores inválidos detectados", devEui);
                 return;
             }
 

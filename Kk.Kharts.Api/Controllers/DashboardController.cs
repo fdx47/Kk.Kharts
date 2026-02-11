@@ -1,26 +1,22 @@
-﻿using Kk.Kharts.Api.Data;
-using Kk.Kharts.Api.Services.IService;
-using Kk.Kharts.Shared.Entities;
+﻿using Kk.Kharts.Api.Services.IService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace Kk.Kharts.Api.Controllers
 {
-    //[Route("api/v1/[controller]")]
     [Route("api/v1/dashboards")]
     [ApiController]
     [Authorize]
 
     public class DashboardController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IDashboardService _dashboardService;
         private readonly IUserContext _userContext;
 
-        public DashboardController(AppDbContext context, IUserContext userContext)
+        public DashboardController(IDashboardService dashboardService, IUserContext userContext)
         {
-            _context = context;
+            _dashboardService = dashboardService;
             _userContext = userContext;
         }
 
@@ -34,30 +30,7 @@ namespace Kk.Kharts.Api.Controllers
                 return BadRequest("Le JSON du tableau de bord est vide.");
 
             var rawJson = stateJson.GetRawText();
-
-            var existingDashboard = await _context.Dashboards.FirstOrDefaultAsync(d => d.UserId == authenticatedUser.UserId);
-
-            if (existingDashboard != null)
-            {
-                // Atualiza o dashboard existente
-                existingDashboard.StateJson = rawJson;
-                existingDashboard.CreatedAt = DateTime.UtcNow; // Atualize a data se necessário
-                _context.Dashboards.Update(existingDashboard);
-            }
-            else
-            {
-                // Cria um novo dashboard
-                var dashboard = new Dashboard
-                {
-                    StateJson = rawJson,
-                    UserId = authenticatedUser.UserId,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Dashboards.Add(dashboard);
-            }
-
-            await _context.SaveChangesAsync();
+            await _dashboardService.SaveStateAsync(authenticatedUser.UserId, rawJson);
 
             return Ok(new { Message = "État enregistré ou mis à jour avec succès." });
         }
@@ -67,12 +40,7 @@ namespace Kk.Kharts.Api.Controllers
         public async Task<IActionResult> GetMyDashboardStates()
         {
             var authenticatedUser = await _userContext.GetUserInfoFromToken();
-
-            var states = await _context.Dashboards
-                .Where(d => d.UserId == authenticatedUser.UserId)
-                .OrderByDescending(d => d.CreatedAt)
-                .ToListAsync();
-
+            var states = await _dashboardService.GetAllByUserIdAsync(authenticatedUser.UserId);
             return Ok(states);
         }
     }

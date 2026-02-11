@@ -8,7 +8,7 @@ namespace Kk.Kharts.Api.Repositories.IRepository
     public interface IUc502Repository
     {
         Task AddEntityAndSaveAsync(Uc502Wet150 entity);
-        Task<IQueryable<Uc502Wet150>> GetUc502Wet150DataByDevEuiAsync(string devEui, AuthenticatedUserDto authenticatedUser);
+        IQueryable<Uc502Wet150> GetUc502Wet150DataByDevEui(string devEui, AuthenticatedUserDto authenticatedUser);
         Task<bool> DeleteWet150ByIdAsync(DateTime timestamp, string devEui);
 
         Task AddEntityAndSaveModbusDataAsync(Uc502Modbus entity);

@@ -10,7 +10,7 @@ using System.Text;
 
 namespace Kk.Kharts.Api.Services
 {
-    public class JwtService
+    public class JwtService : IService.IJwtService
     {
         private readonly string _secretKey;
         private readonly int _jwtExpirationMinutes;
@@ -27,13 +27,13 @@ namespace Kk.Kharts.Api.Services
         {            
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, utilisateur.Id.ToString()),     // ID do usuário
-                new Claim(ClaimTypes.Name, utilisateur.Nom),                         // Nome do usuário
-                new Claim(ClaimTypes.Email, utilisateur.Email),                      // E-mail do usuário
-                new Claim(ClaimTypes.Role, utilisateur.Role),
+                new Claim(ClaimTypes.NameIdentifier, utilisateur.Id.ToString()),
+                new Claim(ClaimTypes.Name, utilisateur.Nom ?? string.Empty),
+                new Claim(ClaimTypes.Email, utilisateur.Email ?? string.Empty),
+                new Claim(ClaimTypes.Role, utilisateur.Role ?? string.Empty),
                 new Claim(ClaimTypesCustom.NiveauAcces, ((int)utilisateur.AccessLevel).ToString()),
                 new Claim(ClaimTypesCustom.SocieteId, utilisateur.CompanyId.ToString()),
-                new Claim("companyPublicId", _hashIdService.Encode(utilisateur.CompanyId)),
+                new Claim("companyPublicId", _hashIdService.Encode(utilisateur.CompanyId) ?? string.Empty),
                 new Claim(ClaimTypesCustom.LastLogin, DateTime.UtcNow.ToString("o"))               // Último login
             };
 

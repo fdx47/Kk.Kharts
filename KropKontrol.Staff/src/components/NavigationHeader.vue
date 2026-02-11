@@ -1,54 +1,57 @@
 <template>
   <header class="navigation-header">
     <div class="container-fluid">
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <h1 class="h3 mb-0">
-            <i :class="getPageIcon()" class="text-primary me-2"></i>
-            {{ getPageTitle() }}
-          </h1>
-          <p class="text-muted mb-0">{{ getPageSubtitle() }}</p>
-        </div>
-        <div class="col-md-6 text-end">
-          <div class="d-inline-flex gap-2 align-items-center">
-            <!-- Navigation Menu -->
-            <div class="nav-menu">
-              <div class="btn-group" role="group">
-                <button 
-                  class="btn btn-sm" 
-                  :class="$route.name === 'Dashboard' ? 'btn-primary' : 'btn-outline-primary'"
-                  @click="$router.push('/')"
-                  title="Dashboard"
-                >
-                  <i class="bi bi-speedometer2 me-1"></i>
-                  Dashboard
-                </button>
-                <button 
-                  class="btn btn-sm" 
-                  :class="$route.name === 'Logs' ? 'btn-primary' : 'btn-outline-primary'"
-                  @click="$router.push('/logs')"
-                  title="Logs"
-                >
-                  <i class="bi bi-file-text me-1"></i>
-                  Logs
-                </button>
-                <button 
-                  class="btn btn-sm" 
-                  :class="$route.name === 'VpnProfiles' ? 'btn-primary' : 'btn-outline-primary'"
-                  @click="$router.push('/vpn-profiles')"
-                  title="VPN Profiles"
-                >
-                  <i class="bi bi-shield-lock me-1"></i>
-                  VPN
-                </button>
+      <div class="header-layout">
+        <div class="header-top">
+          <div class="title-block">
+            <div class="page-icon">
+              <i :class="getPageIcon()"></i>
+            </div>
+            <div class="title-text">
+              <h1 class="h3 mb-1">{{ getPageTitle() }}</h1>
+              <p class="text-muted mb-1">{{ getPageSubtitle() }}</p>
+              <div class="header-meta">
+                <span class="badge-pill">Système</span>
+                <small class="text-muted">MàJ {{ lastUpdatedLabel }}</small>
               </div>
             </div>
-            
-            <!-- Page-specific controls (slot) -->
+          </div>
+        </div>
+
+        <div class="header-toolbar">
+          <div class="nav-menu">
+            <button 
+              class="nav-chip"
+              :class="{ active: $route.name === 'Dashboard' }"
+              @click="$router.push('/')"
+              title="Dashboard"
+            >
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </button>
+            <button 
+              class="nav-chip"
+              :class="{ active: $route.name === 'Logs' }"
+              @click="$router.push('/logs')"
+              title="Logs"
+            >
+              <i class="bi bi-file-text"></i>
+              Logs
+            </button>
+            <button 
+              class="nav-chip"
+              :class="{ active: $route.name === 'VpnProfiles' }"
+              @click="$router.push('/vpn-profiles')"
+              title="VPN Profiles"
+            >
+              <i class="bi bi-shield-lock"></i>
+              VPN
+            </button>
+          </div>
+
+          <div class="toolbar-controls">
             <slot name="controls"></slot>
-            
-            <!-- Actions -->
-            <button class="btn btn-outline-danger btn-sm" @click="handleLogout" title="Déconnexion">
+            <button class="btn btn-outline-danger btn-sm logout-button" @click="handleLogout" title="Déconnexion">
               <i class="bi bi-box-arrow-right me-1"></i>
               Déconnexion
             </button>
@@ -114,11 +117,18 @@ export default {
       router.push('/login')
     }
 
+    const lastUpdatedLabel = new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(new Date())
+
     return {
       getPageTitle,
       getPageSubtitle,
       getPageIcon,
-      handleLogout
+      handleLogout,
+      lastUpdatedLabel
     }
   }
 }
@@ -133,40 +143,174 @@ export default {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.navigation-header .container-fluid {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.header-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.title-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #8ec5fc, #e0c3fc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  color: #3b3c54;
+}
+
+.header-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.badge-pill {
+  align-self: flex-end;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+  background: #edf2ff;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #c7d2fe;
+}
+
+
+.header-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .nav-menu {
-  display: inline-block;
-  margin-right: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  row-gap: 0.6rem;
 }
 
-.nav-menu .btn-group .btn {
-  min-width: 100px;
-  transition: all 0.3s ease;
+.nav-chip {
+  border: none;
+  border-radius: 999px;
+  padding: 0.5rem 1.2rem;
+  background: rgba(99, 102, 241, 0.08);
+  color: #4c4f6b;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.25s ease;
 }
 
-.nav-menu .btn-group .btn:hover {
+.nav-chip i {
+  font-size: 1rem;
+}
+
+.nav-chip:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.15);
+}
+
+.nav-chip.active {
+  background: linear-gradient(135deg, #4338ca, #6366f1);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.35);
+}
+
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.logout-button {
+  border-width: 2px;
+  border-radius: 999px;
+  padding-inline: 1.25rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.logout-button:hover {
+  background: #dc3545;
+  color: #fff;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .navigation-header .col-md-6 {
-    text-align: center !important;
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
-  
+
+  .header-meta {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .header-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
   .nav-menu {
-    margin-right: 0;
-    margin-bottom: 1rem;
+    width: 100%;
+    justify-content: flex-start;
   }
-  
-  .nav-menu .btn-group .btn {
-    min-width: 80px;
-    font-size: 0.875rem;
+
+  .nav-chip {
+    flex: 1 1 auto;
+    min-width: 110px;
+    justify-content: center;
   }
-  
-  .nav-menu .btn-group .btn i {
-    display: block;
-    margin-bottom: 0.25rem;
+
+  .toolbar-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .logout-button {
+    width: 100%;
+    justify-content: center;
   }
 }
+
 </style>

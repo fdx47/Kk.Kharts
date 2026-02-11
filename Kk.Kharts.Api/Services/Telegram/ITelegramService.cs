@@ -156,7 +156,17 @@ public interface ITelegramService
     Task SetBotCommandsAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// Configure les commandes du bot de debug (administration interne).
+    /// </summary>
+    Task SetDebugBotCommandsAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Configure le bouton de menu pour ouvrir la Mini App.
     /// </summary>
     Task SetWebAppMenuButtonAsync(string text, string url, CancellationToken ct = default);
+
+    /// <summary>
+    /// Configure le bouton de menu pour la Mini App sur le bot de debug.
+    /// </summary>
+    Task SetDebugWebAppMenuButtonAsync(string text, string url, CancellationToken ct = default);
 }

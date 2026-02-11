@@ -37,6 +37,61 @@ public class DebugBotController : ControllerBase
         NewerThan
     }
 
+    private const string StaffWebAppUrl = "https://kropkontrol.com/staff/";
+
+    private async Task HandleStaffCommandAsync(long chatId, bool isPrivateChat, CancellationToken ct, int? topicId = null)
+    {
+        var kb = new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                isPrivateChat
+                    ? InlineKeyboardButton.WithWebApp(
+                        text: "🚀 Ouvrir KropKontrol Staff",
+                        webApp: new WebAppInfo { Url = StaffWebAppUrl })
+                    : InlineKeyboardButton.WithUrl(
+                        text: "🚀 Ouvrir KropKontrol Staff",
+                        url: StaffWebAppUrl)
+            }
+        });
+
+        var message = $"""
+{TelegramConstants.Emojis.Rocket} <b>KropKontrol Staff</b>
+
+Accédez au tableau de bord interne directement dans Telegram via le bouton ci-dessous.
+Identifiants Root requis.
+""";
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: message,
+            parseMode: ParseMode.Html,
+            messageThreadId: topicId,
+            replyMarkup: kb,
+            cancellationToken: ct);
+    }
+
+    private async Task HandleMiniAppSetupCommandAsync(long chatId, CancellationToken ct)
+    {
+        try
+        {
+            await _telegramService.SetDebugWebAppMenuButtonAsync("KropKontrol", StaffWebAppUrl, ct);
+            await SendMessageAsync(chatId,
+                "✅ Le bouton de menu <b>Mini-App</b> a été configuré avec succès pour https://kropkontrol.com/staff/.",
+                ct,
+                null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur lors de la configuration du bouton Mini-App");
+            await SendMessageAsync(chatId,
+                "❌ Impossible de configurer le bouton Mini-App. Consultez les logs pour plus de détails.",
+                ct,
+                null);
+        }
+    }
+
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IUserService _userService;
     private readonly TelegramOptions _options;
@@ -65,7 +120,7 @@ public class DebugBotController : ControllerBase
         _options = options.Value;
         _botClient = new TelegramBotClient(_options.DebugBotToken);
         _logger = logger;
-        _logsDirectory = Path.Combine(AppContext.BaseDirectory, "kklogs");
+        _logsDirectory = Path.Combine(AppContext.BaseDirectory, GlobalConstants.LogsDirectoryName);
         _tz = tz;
         _telegramService = telegramService;
         _telegramUserService = telegramUserService;
@@ -92,6 +147,7 @@ public class DebugBotController : ControllerBase
 
         var message = update.Message;
         var chatId = message.Chat.Id;
+        var isPrivateChat = message.Chat.Type == ChatType.Private;
         var text = message.Text.Trim();
 
         // Capturar thread ID para grupos com tópicos (para logging)
@@ -118,20 +174,24 @@ public class DebugBotController : ControllerBase
             }
 
             // Processar comandos
+            var topicId = isPrivateChat ? (int?)null : _options.CmdsTopicId;
+
             if (text.StartsWith("/last", StringComparison.OrdinalIgnoreCase) && !text.StartsWith("/lastseen"))
-                await HandleLastCommandAsync(chatId, text, ct, _options.CmdsTopicId);
+                await HandleLastCommandAsync(chatId, text, ct, topicId);
             else if (text.StartsWith("/lastseen", StringComparison.OrdinalIgnoreCase))
-                await HandleLastSeenCommandAsync(chatId, text, ct, _options.CmdsTopicId);
+                await HandleLastSeenCommandAsync(chatId, text, ct, topicId);
             else if (text.StartsWith("/offline", StringComparison.OrdinalIgnoreCase))
-                await HandleOfflineCommandAsync(chatId, text, ct, _options.CmdsTopicId);
+                await HandleOfflineCommandAsync(chatId, text, ct, topicId);
             else if (text.Equals("/inactive", StringComparison.OrdinalIgnoreCase))
-                await HandleInactiveCommandAsync(chatId, ct, _options.CmdsTopicId);
+                await HandleInactiveCommandAsync(chatId, ct, topicId);
             else if (text.StartsWith("/createuserdemo", StringComparison.OrdinalIgnoreCase))
                 await HandleCreateUserDemoCommandAsync(chatId, text, ct);
             else if (text.Equals("/help", StringComparison.OrdinalIgnoreCase))
-                await HandleHelpCommandAsync(chatId, ct);
+                await HandleHelpCommandAsync(chatId, ct, topicId);
             else if (text.StartsWith("/stats", StringComparison.OrdinalIgnoreCase))
-                await HandleStatsCommandAsync(chatId, text, ct, _options.CmdsTopicId);
+                await HandleStatsCommandAsync(chatId, text, ct, topicId);
+            else if (text.Equals("/staff", StringComparison.OrdinalIgnoreCase))
+                await HandleStaffCommandAsync(chatId, isPrivateChat, ct, topicId);
             else if (text.StartsWith("/reply", StringComparison.OrdinalIgnoreCase))
                 await HandleReplyCommandAsync(chatId, text, ct);
             else if (text.StartsWith("/generatepassword", StringComparison.OrdinalIgnoreCase))
@@ -149,7 +209,7 @@ public class DebugBotController : ControllerBase
     }
 
 
-    private async Task HandleHelpCommandAsync(long chatId, CancellationToken ct)
+    private async Task HandleHelpCommandAsync(long chatId, CancellationToken ct, int? topicId = null)
     {
         var helpMessage = $"""
             🤖 <b>Bot Debug KropKontrol</b>
@@ -165,6 +225,7 @@ public class DebugBotController : ControllerBase
             • <code>/createuserdemo Nom Prénom Mdp [jours]</code> - Créer un compte démo
             • <code>/reply chatId message</code> - Répondre à un utilisateur
             • <code>/generatepassword [minutes]</code> - Token d'accès temporaire
+            • <code>/staff</code> - Ouvrir la page Staff (https://kropkontrol.com/staff/)
 
             """;
 
@@ -172,7 +233,7 @@ public class DebugBotController : ControllerBase
             chatId: chatId,
             text: helpMessage,
             parseMode: ParseMode.Html,
-            messageThreadId: _options.CmdsTopicId,
+            messageThreadId: topicId,
             replyMarkup: BuildPersistentKeyboard(),
             cancellationToken: ct);
     }
@@ -484,7 +545,7 @@ public class DebugBotController : ControllerBase
             Email = $"{firstName.ToLower()}_{dateValidadeString}@kkdemo.com",
             Password = password,
             Role = "Demo",
-            CompanyId = 20 // KropKontrol
+            CompanyId = GlobalConstants.KropKontrolCompanyId
         };
 
         var result = await _userService.CreateUserAsync(dto);
@@ -989,12 +1050,15 @@ public class DebugBotController : ControllerBase
 
     private async Task SendMessageAsync(long chatId, string text, CancellationToken ct, int? topicId = null)
     {
-        topicId ??= _options.CmdsTopicId;
+        var resolvedTopicId = ShouldForceTopic(chatId, topicId)
+            ? (int?)(topicId ?? _options.CmdsTopicId)
+            : null;
+
         async Task sendChunk(string chunk) =>
             await _botClient.SendMessage(chatId,
                 chunk,
                 parseMode: ParseMode.Html,
-                messageThreadId: topicId,
+                messageThreadId: resolvedTopicId,
                 cancellationToken: ct);
 
         if (text.Length > _options.MaxMessageLength)
@@ -1006,6 +1070,21 @@ public class DebugBotController : ControllerBase
         {
             await sendChunk(text);
         }
+    }
+
+    private bool ShouldForceTopic(long chatId, int? topicId)
+    {
+        if (!long.TryParse(_options.DebugChatId, out var configuredChatId))
+        {
+            return false;
+        }
+
+        if (chatId != configuredChatId)
+        {
+            return false;
+        }
+
+        return (topicId ?? _options.CmdsTopicId) > 0;
     }
 
 

@@ -14,7 +14,7 @@ namespace Kk.Kharts.Api.Controllers;
 [Route("api/v1/debugs")]
 public class DebugController(ITelegramService telegram, IOptions<TelegramOptions> telegramOptions) : ControllerBase
 {
-    private readonly string _logDir = Path.Combine(AppContext.BaseDirectory, "kklogs");
+    private readonly string _logDir = Path.Combine(AppContext.BaseDirectory, Utility.Constants.GlobalConstants.LogsDirectoryName);
     private readonly TelegramOptions _options = telegramOptions.Value;
 
 

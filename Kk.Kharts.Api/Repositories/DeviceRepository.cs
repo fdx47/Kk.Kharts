@@ -124,7 +124,7 @@ namespace Kk.Kharts.Api.Repositories
                     foreach (var device in group.Devices) // Para cada dispositivo dentro do grupo
                     {
                         device.Company.Name = "KropKontrol"; // Define o nome da empresa
-                        device.CompanyId = 20;
+                        device.CompanyId = GlobalConstants.KropKontrolCompanyId;
 
                         // Se o ModelId for 47, gera um nome dinâmico como "VWC serre 1", "VWC serre 2", etc.
                         if (device.ModeloNavegacao?.ModelId == 47)
@@ -186,7 +186,7 @@ namespace Kk.Kharts.Api.Repositories
                             Description = demo.Description,
                             InstallationLocation = demo.InstallationLocation,
 
-                            CompanyId = 20,//deviceFromDb.CompanyId,
+                            CompanyId = GlobalConstants.KropKontrolCompanyId,
                             //Company = deviceFromDb.Company,
                             Company = new Company { Name = "KropKontrol" },
                             ActiveInKropKontrol = deviceFromDb.ActiveInKropKontrol,
@@ -331,7 +331,7 @@ namespace Kk.Kharts.Api.Repositories
                     Description = demo.Description,
                     InstallationLocation = demo.InstallationLocation,
 
-                    CompanyId = 20, // ou deviceFromDb.CompanyId
+                    CompanyId = GlobalConstants.KropKontrolCompanyId,
                     //Company = deviceFromDb.Company,
                     Company = new Company { Name = "KropKontrol" },
                     ActiveInKropKontrol = deviceFromDb.ActiveInKropKontrol,

@@ -1,19 +1,22 @@
-﻿using Kk.Kharts.Api.Services;
+﻿using System.Security.Claims;
+using System.Text.Json;
+using Kk.Kharts.Api.Services;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
-using System.Security.Claims;
-using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 public class DebugUserActivityMiddleware
 {
     private readonly RequestDelegate _next;
     private static readonly object _fileLock = new();
     private readonly IKkTimeZoneService _timeZoneService;
+    private readonly ILogger<DebugUserActivityMiddleware> _logger;
 
-    public DebugUserActivityMiddleware(RequestDelegate next, IKkTimeZoneService timeZoneService)
+    public DebugUserActivityMiddleware(RequestDelegate next, IKkTimeZoneService timeZoneService, ILogger<DebugUserActivityMiddleware> logger)
     {
         _next = next;
         _timeZoneService = timeZoneService;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -41,16 +44,26 @@ public class DebugUserActivityMiddleware
                   ----------------------------------------------------------------------
                   """;
 
-            var logDir = Path.Combine(AppContext.BaseDirectory, "kklogs");
+            var logDir = Path.Combine(AppContext.BaseDirectory, Kk.Kharts.Api.Utility.Constants.GlobalConstants.LogsDirectoryName);
             Directory.CreateDirectory(logDir);
 
             var fileName = DateTime.UtcNow.ToString("ddMMyy") + ".txt";
             var filePath = Path.Combine(logDir, fileName);
 
-            // ✅ PROTEGE ACESSO AO ARQUIVO
-            lock (_fileLock)
+            try
             {
-                File.AppendAllText(filePath, logMsg + Environment.NewLine);
+                using var stream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                using var writer = new StreamWriter(stream);
+                writer.WriteLine(logMsg);
+                writer.WriteLine();
+            }
+            catch (IOException ioEx)
+            {
+                _logger.LogWarning(ioEx, "Impossible d'écrire dans {FilePath}.", filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de l'enregistrement de l'activité utilisateur dans {FilePath}.", filePath);
             }
         }
 

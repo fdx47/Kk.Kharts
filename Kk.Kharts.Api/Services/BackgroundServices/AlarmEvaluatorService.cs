@@ -12,9 +12,12 @@ using Telegram.Bot.Types.Enums;
 public class AlarmEvaluatorService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    public AlarmEvaluatorService(IServiceScopeFactory scopeFactory)
+    private readonly ILogger<AlarmEvaluatorService> _logger;
+
+    public AlarmEvaluatorService(IServiceScopeFactory scopeFactory, ILogger<AlarmEvaluatorService> logger)
     {
         _scopeFactory = scopeFactory;
+        _logger = logger;
     }
 
 
@@ -35,31 +38,28 @@ public class AlarmEvaluatorService : BackgroundService
                 // Obter as regras de alarme ativas
                 var rules = await alarmService.GetAllActiveRulesAsync();
 
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"\n[Alarme Debug] Método GetActiveRulesAsync retornou {rules?.Count ?? 0} regras.");
+                _logger.LogDebug("GetAllActiveRulesAsync retornou {Count} regras", rules?.Count ?? 0);
 
                 if (rules == null || !rules.Any())
                 {
-                    Console.WriteLine("[Alarme Debug] Nenhuma regra ativa encontrada para o filtro 'fdx'. Verifique a query e os dados.");
+                    _logger.LogDebug("Aucune règle active trouvée");
                 }
                 else
                 {
                     foreach (var r in rules)
                     {
-                        Console.WriteLine($"[Alarme Debug] Regra carregada: ID={r.Id}, DeviceId={r.DeviceId}, DevEui={r.DevEui},  Ativa={r.Enabled}, AlarmeAtivo={r.IsAlarmActive}");
+                        _logger.LogDebug("Règle chargée: ID={RuleId}, DeviceId={DeviceId}, DevEui={DevEui}, Enabled={Enabled}, IsAlarmActive={IsAlarmActive}",
+                            r.Id, r.DeviceId, r.DevEui, r.Enabled, r.IsAlarmActive);
                     }
                 }
 
                 var telegramAlarmMessages = new Dictionary<string, StringBuilder>();
                 var telegramResetMessages = new Dictionary<string, StringBuilder>();
-                // var pushoverAlarmMessages = new Dictionary<string, StringBuilder>();
-                // var pushoverResetMessages = new Dictionary<string, StringBuilder>();
 
                 // Loop através de cada regra de alarme para avaliação
                 foreach (var rule in rules!)
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"[Alarme] Avaliando regra ID: {rule.Id}, Prop: {rule.PropertyName}");
+                    _logger.LogDebug("Évaluation règle ID={RuleId}, Prop={PropertyName}", rule.Id, rule.PropertyName);
 
                     IReading? latestReading = null;
 
@@ -89,7 +89,7 @@ public class AlarmEvaluatorService : BackgroundService
 
                     if (latestReading is null)
                     {
-                        Console.WriteLine($"[Alarme Debug] Não foi encontrada leitura recente para DeviceId: {rule.DeviceId}. Pulando regra.");
+                        _logger.LogDebug("Aucune lecture récente pour DeviceId={DeviceId}, règle ignorée", rule.DeviceId);
                         continue; // Pula para a próxima regra se não houver leitura
                     }
 
@@ -97,7 +97,8 @@ public class AlarmEvaluatorService : BackgroundService
                     var prop = latestReading.GetType().GetProperty(rule.PropertyName!, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     if (prop == null)
                     {
-                        Console.WriteLine($"[Alarme Debug] ERRO: Propriedade '{rule.PropertyName}' não encontrada na entidade de leitura {latestReading.GetType().Name} para DeviceId: {rule.DeviceId}.");
+                        _logger.LogWarning("Propriété '{PropertyName}' introuvable sur {EntityType} pour DeviceId={DeviceId}",
+                            rule.PropertyName, latestReading.GetType().Name, rule.DeviceId);
                         continue; // Pula para a próxima regra se a propriedade não for encontrada
                     }
 
@@ -105,17 +106,15 @@ public class AlarmEvaluatorService : BackgroundService
 
                     if (valObj is not float currentValue) // Tenta converter o valor para float
                     {
-                        Console.WriteLine($"[Alarme] Sem leitura recente para a regra ID: {rule.Id}. Pulando.");
+                        _logger.LogDebug("Valeur non-float pour règle ID={RuleId}, ignorée", rule.Id);
                         continue; // Pula se a conversão falhar
                     }
 
                     // --- INÍCIO DA LÓGICA DE HISTÉRESE ---
                     float? hysteresis = rule.Hysteresis; // Obtém o valor de histérese da regra
 
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"\n[Alarme Debug] Valor atual para {rule.PropertyName}: {currentValue}");
-                    Console.WriteLine($"[Alarme Debug] Alarme estava ativo? {rule.IsAlarmActive}, Tipo Limite Ativo: {rule.ActiveThresholdType}");
-                    Console.WriteLine($"[Alarme Debug] LowValue: {rule.LowValue}, HighValue: {rule.HighValue}, Hysteresis: {rule.Hysteresis}");
+                    _logger.LogDebug("Règle ID={RuleId}: valeur={CurrentValue}, IsAlarmActive={IsAlarmActive}, ThresholdType={ThresholdType}, Low={Low}, High={High}, Hysteresis={Hysteresis}",
+                        rule.Id, currentValue, rule.IsAlarmActive, rule.ActiveThresholdType, rule.LowValue, rule.HighValue, rule.Hysteresis);
 
                     bool flagShouldSendAlarmNotification = false; // Flag para determinar se uma NOVA notificação deve ser enviada
                     bool flagACK = false;
@@ -124,29 +123,25 @@ public class AlarmEvaluatorService : BackgroundService
                     // Cenário 1: Alarme NÃO está ativo atualmente no banco (primeiro disparo)
                     if (!rule.IsAlarmActive)
                     {
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"\n[Alarme Debug] Entré dans le bloc : l'alarme n'est PAS active dans la base de données.");
+                        _logger.LogDebug("Règle ID={RuleId}: alarme non active, vérification des seuils", rule.Id);
 
                         // Verifica se o valor ultrapassou o limite inferior
                         if (rule.LowValue.HasValue && currentValue < rule.LowValue.Value)
                         {
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"[Alarme Debug] Condição 'currentValue < LowValue' TRUE ({currentValue} < {rule.LowValue.Value}). Prêt à déclencher l'alarme LOW.");
+                            _logger.LogDebug("Règle ID={RuleId}: {CurrentValue} < LowValue {LowValue} → déclenchement LOW", rule.Id, currentValue, rule.LowValue!.Value);
                             flagShouldSendAlarmNotification = true;
                             newActiveThresholdType = "Low";
                         }
                         // Verifica se o valor ultrapassou o limite superior
                         else if (rule.HighValue.HasValue && currentValue > rule.HighValue.Value)
                         {
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"\n[Alarme Debug] Condition 'currentValue > HighValue' TRUE ({currentValue} > {rule.HighValue.Value}). Prêt à déclencher l'alarme HIGH..");
+                            _logger.LogDebug("Règle ID={RuleId}: {CurrentValue} > HighValue {HighValue} → déclenchement HIGH", rule.Id, currentValue, rule.HighValue!.Value);
                             flagShouldSendAlarmNotification = true;
                             newActiveThresholdType = "High";
                         }
                         else
                         {
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"\n*** [Alarme Debug] Aucune condition de seuil (Bas/Haut) n'a été atteinte lors du premier déclenchement. ***");
+                            _logger.LogDebug("Règle ID={RuleId}: aucune condition de seuil atteinte", rule.Id);
                         }
                     }
                     // Cenário 2: Alarme JÁ está ativo (verificar histérese ou reset)
@@ -229,11 +224,12 @@ public class AlarmEvaluatorService : BackgroundService
                     // OU
                     // 2. O alarme NÃO estava ativo E o valor violou um dos limites originais (caso a histérese seja 0 ou nula e o valor ainda esteja fora)
 
-                    Console.WriteLine($"\n[Alarme Debug] Fin de la logique d’hystérésis. shouldSendAlarmNotification = {flagShouldSendAlarmNotification}, newActiveThresholdType = {newActiveThresholdType ?? "NULO"}");
+                    _logger.LogDebug("Règle ID={RuleId}: fin hystérésis, shouldNotify={ShouldNotify}, thresholdType={ThresholdType}",
+                        rule.Id, flagShouldSendAlarmNotification, newActiveThresholdType ?? "(aucun)");
                    
                     if (flagShouldSendAlarmNotification || (!rule.IsAlarmActive && ((rule.LowValue.HasValue && currentValue < rule.LowValue.Value) || (rule.HighValue.HasValue && currentValue > rule.HighValue.Value))))
                     {
-                        Console.WriteLine($"[Alarme Debug] La condition finale de DÉCLENCHEMENT de l'alarme est TRUE pour la règle ID : {rule.Id}.");
+                        _logger.LogInformation("Déclenchement alarme pour règle ID={RuleId}", rule.Id);
 
                         var thresholdValue = newActiveThresholdType == "Low" ? rule.LowValue : rule.HighValue;
 
@@ -264,7 +260,7 @@ public class AlarmEvaluatorService : BackgroundService
                     //else if (rule.IsAlarmActive && !flagShouldSendAlarmNotification && !rule.IsAlarmHandled)
                     else if (flagACK)
                             {
-                        Console.WriteLine($"\n[Alarme Debug] Condição de RESET de alarme é TRUE para regra ID: {rule.Id}. Enviando notificação de reset.");
+                        _logger.LogInformation("Reset alarme pour règle ID={RuleId}", rule.Id);
 
                         // Converte DeviceId para string antes de usá-lo como chave do dicionário.
                         string deviceIdString = rule.DeviceId.ToString();
@@ -289,8 +285,7 @@ public class AlarmEvaluatorService : BackgroundService
                     }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Magenta;
-                        Console.WriteLine($"\n[Alarme Debug] Nenhuma condição de disparo OU reset foi atendida para regra ID: {rule.Id}.");
+                        _logger.LogDebug("Règle ID={RuleId}: aucune condition de déclenchement ou reset", rule.Id);
                     }
 
 
@@ -314,13 +309,12 @@ public class AlarmEvaluatorService : BackgroundService
                     };
 
                     db.AlarmRules.Update(entityRule);
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"\n[Alarme Debug] Regra ID {rule.Id} marcada para atualização no DB. IsAlarmActive={rule.IsAlarmActive}, ActiveThresholdType={rule.ActiveThresholdType ?? "NULO"}");
+                    _logger.LogDebug("Règle ID={RuleId} marquée pour mise à jour DB: IsAlarmActive={IsAlarmActive}, ThresholdType={ThresholdType}",
+                        rule.Id, rule.IsAlarmActive, rule.ActiveThresholdType ?? "(aucun)");
                 }
 
                 // --- Envia notificações agrupadas APÓS o loop de avaliação das regras ---
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("\n[Alarme Debug] Enviando notificações Telegram agrupadas...");
+                _logger.LogDebug("Envoi des notifications Telegram groupées...");
 
                 // Itera sobre as mensagens de ALARME agrupadas por dispositivo e as envia.
                 foreach (var entry in telegramAlarmMessages)
@@ -330,13 +324,11 @@ public class AlarmEvaluatorService : BackgroundService
                     try
                     {
                         await telegram.SendMessageAsync(messageContent, ParseMode.Html);
-                        Console.ForegroundColor = ConsoleColor.DarkCyan;
-                        Console.WriteLine($"\n[Telegram Debug] Notificação de ALARME para DeviceId {deviceIdString} ENVIADA com sucesso.");
+                        _logger.LogDebug("Notification ALARME envoyée pour DeviceId={DeviceId}", deviceIdString);
                     }
                     catch (Exception telegramEx)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"\n[Telegram Debug] ERRO ao enviar notificação de ALARME para DeviceId {deviceIdString}: {telegramEx.Message}");
+                        _logger.LogError(telegramEx, "Erreur envoi notification ALARME pour DeviceId={DeviceId}", deviceIdString);
                     }
                 }
 
@@ -348,40 +340,30 @@ public class AlarmEvaluatorService : BackgroundService
                     try
                     {
                         await telegram.SendMessageAsync(messageContent, ParseMode.Html);
-                        //Console.ForegroundColor = ConsoleColor.DarkYellow;
-                        //Console.WriteLine("***********************************************************************************");
-                        //Console.WriteLine($"*** [Telegram Debug] Notificação de RESET para DeviceId {deviceIdString} ENVIADA com sucesso. ***");
-                        //Console.ForegroundColor = ConsoleColor.White;
-                        //Console.WriteLine($"Mesage : {messageContent}");
-                        //Console.ForegroundColor = ConsoleColor.DarkYellow;
-                        //Console.WriteLine("***********************************************************************************");
-                        //Console.ResetColor();
-                        //Console.ForegroundColor = ConsoleColor.Yellow;
                     }
                     catch (Exception telegramEx)
                     {
-                        Console.WriteLine($"[Telegram Debug] ERRO ao enviar notificação de RESET para DeviceId {deviceIdString}: {telegramEx.Message}");
+                        _logger.LogError(telegramEx, "Erreur envoi notification RESET pour DeviceId={DeviceId}", deviceIdString);
                     }
                 }               
 
                 // Salva todas as alterações de estado das regras no banco de dados em uma única transação
-                Console.WriteLine("[Alarme Debug] Loop de avaliação de regras finalizado. Salvando alterações no DB.");
+                _logger.LogDebug("Fin boucle évaluation, sauvegarde DB...");
                 await db.SaveChangesAsync(stoppingToken);
-                Console.WriteLine("[Alarme Debug] Alterações salvas no DB.\n\n");
+                _logger.LogDebug("Modifications sauvegardées en DB");
                
                await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
-               // await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);  // Atraso antes da próxima execução
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Alarme] Erro no serviço de avaliação: {ex.Message}");              
+                _logger.LogError(ex, "Erreur dans le service d'évaluation des alarmes");              
                 var delay = GetDelayForException(ex);
                 await Task.Delay(delay, stoppingToken); // Aguarda antes de tentar novamente
             }
             finally
             {
-                Console.ResetColor();
+                // Scope is disposed here via using
             }
         }
     }

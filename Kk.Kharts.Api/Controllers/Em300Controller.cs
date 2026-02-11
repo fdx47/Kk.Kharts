@@ -22,63 +22,27 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IEm300ThService _em300ThService;
         private readonly IEm300DiService _em300DiService;
         private readonly IUserContext _userContext;
-        //private readonly ILogger<Em300Controller> _logger;
+        private readonly ILogger<Em300Controller> _logger;
         private readonly IApiKeyIngestionHandler _ingestionHandler;
-        private readonly IDeviceService _deviceService;
         private readonly ITelegramService _telegram;
+        private readonly IDeprecatedEndpointNotifier _deprecatedNotifier;
 
         public Em300Controller(
             IEm300ThService em300ThService,
             IEm300DiService em30DiService,
             IUserContext userContext,
-           // ILogger<Em300Controller> logger,
+            ILogger<Em300Controller> logger,
             IApiKeyIngestionHandler ingestionHandler,
-            IDeviceService deviceService,
-            ITelegramService telegram)
+            ITelegramService telegram,
+            IDeprecatedEndpointNotifier deprecatedNotifier)
         {
             _em300ThService = em300ThService;
             _em300DiService = em30DiService;
             _userContext = userContext;
-           // _logger = logger;
+            _logger = logger;
             _ingestionHandler = ingestionHandler;
-            _deviceService = deviceService;
             _telegram = telegram;
-        }
-
-        private async Task NotifyDeprecatedUsageAsync(string endpoint, string? devEui = null)
-        {
-            var normalizedDevEui = string.IsNullOrWhiteSpace(devEui)
-                ? null
-                : DevEuiNormalizer.Normalize(devEui);
-
-            Device? device = null;
-
-            if (!string.IsNullOrWhiteSpace(normalizedDevEui))
-            {
-                try
-                {
-                    device = await _deviceService.GetDeviceByDevEuiApiKeyInternalAsync(normalizedDevEui);
-                }
-                catch
-                {
-                    // Sem bloqueio: segue sem detalhes se falhar
-                }
-            }
-
-            var description = device?.Description ?? "(sans description)";
-            var companyName = device?.Company?.Name ?? device?.CompanyId.ToString() ?? "(entreprise inconnue)";
-            var location = string.IsNullOrWhiteSpace(device?.InstallationLocation)
-                ? "(localisation non renseignée)"
-                : device!.InstallationLocation;
-
-            var msg = $"⚠️ Endpoint obsolète appelé : {endpoint}\n" +
-                      $"DevEui : {normalizedDevEui ?? "(non fourni)"}\n" +
-                      $"Description : {description}\n" +
-                      $"Entreprise : {companyName}\n" +
-                      $"Site d’installation : {location}\n" +
-                      $"Horodatage : {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-
-            await _telegram.SendToDebugTopicAsync(msg);
+            _deprecatedNotifier = deprecatedNotifier;
         }
 
 
@@ -189,18 +153,6 @@ namespace Kk.Kharts.Api.Controllers
         /// <response code="401">API Key invalide ou entreprise non trouvée.</response>
         /// <response code="404">Dispositif non trouvé.</response>         
 
-        //[ApiKeyAuthorizeKk]
-        //[HttpPost("api/v1/em300/di/https-Ug65")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> PostDiHttpsUg65([FromBody] Em300DiPostRequest request)
-        //{
-        //    var entity = request.ToDto();
-        //    return await ProcessEm300DiAsync(entity, "Mesure déjà reçue... [EM300]");
-        //}
-
-
         [ApiKeyAuthorizeKk]
         [HttpPost("api/v1/em300/di/https-Ug65")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -210,7 +162,13 @@ namespace Kk.Kharts.Api.Controllers
         {
             var entity = request.ToDto();
 
-            var preparation = await _ingestionHandler.PrepareAsync(this, entity.DevEui,"Mesure déjà reçue... [EM300 DI]",entity.Timestamp);
+            var preparation = await _ingestionHandler.PrepareAsync(
+                this,
+                entity.DevEui,
+                "Mesure déjà reçue... [EM300 DI]",
+                entity.Timestamp,
+                entity,
+                "<b>EM300 ▸ DI</b>");
 
             if (preparation.ShouldShortCircuit)
             {
@@ -228,41 +186,8 @@ namespace Kk.Kharts.Api.Controllers
         ////////////////////////////// terminaisons est obsolètes //////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////
 
-        //[Authorize]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //[HttpGet("api/v1/Em300/TH/GetByDevEui")]
-        //public async Task<IActionResult> GetByDeviceObs([FromQuery] string devEui, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
-        //{   
-        //    try
-        //    {
-        //        return await ProcessGetTh(devEui, startDate, endDate);
-        //    }
-        //    finally
-        //    {
-        //        await NotifyDeprecatedUsageAsync("GET api/v1/Em300/TH/GetByDevEui", devEui);
-        //    }
-        //}
-
-
-        //[Authorize]
-        //[HttpGet("api/v1/Em300/DI/GetByDevEui")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> GetDiByDeviceObs([FromQuery] string devEui, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
-        //{     
-        //    try
-        //    {
-        //        return await ProcessGetDi(devEui, startDate, endDate);
-        //    }
-        //    finally
-        //    {
-        //        await NotifyDeprecatedUsageAsync("GET api/v1/Em300/DI/GetByDevEui", devEui);
-        //    }
-        //}
-
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///                                       Endpoints protégé par  API KEY      
-
-
 
         [ApiKeyAuthorizeKk]
         [Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
@@ -271,14 +196,20 @@ namespace Kk.Kharts.Api.Controllers
         {
             var entity = request.ToDto();           
             var result = await ProcessEm300ThAsync(entity, "Mesure déjà reçue...");
-            await NotifyDeprecatedUsageAsync("POST api/v1/Em300/TH/ApiKey/HttpsUg65", entity.DevEui);
+            await _deprecatedNotifier.NotifyAsync("POST api/v1/Em300/TH/ApiKey/HttpsUg65", entity.DevEui);
             return result;
         }
 
 
         private async Task<IActionResult> ProcessEm300ThAsync(Em300ThDTO entity, string duplicateMessage)
         {
-            var preparation = await _ingestionHandler.PrepareAsync(this, entity.DevEui, duplicateMessage, entity.Timestamp);
+            var preparation = await _ingestionHandler.PrepareAsync(
+                this,
+                entity.DevEui,
+                duplicateMessage,
+                entity.Timestamp,
+                entity,
+                "<b>EM300 ▸ TH</b>");
             
             if (preparation.ShouldShortCircuit)
             {
@@ -291,30 +222,5 @@ namespace Kk.Kharts.Api.Controllers
         }
 
 
-        //[ApiKeyAuthorizeKk]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //[HttpPost("api/v1/Em300/DI/ApiKey/HttpsUg65")]
-        //public async Task<IActionResult> PostDiHttpsUg65Obs([FromBody] Em300DiPostRequest request)
-        //{
-        //    var entity = request.ToDto();
-        //    var result = await ProcessEm300DiAsync(entity, "Mesure déjà reçue... [EM300]");
-        //    await NotifyDeprecatedUsageAsync("POST api/v1/Em300/DI/ApiKey/HttpsUg65", entity.DevEui);
-        //    return result;
-        //}
-
-
-        //private async Task<IActionResult> ProcessEm300DiAsync(Em300DiDTO entity, string duplicateMessage)
-        //{
-        //    var preparation = await _ingestionHandler.PrepareAsync(this, entity.DevEui, duplicateMessage, entity.Timestamp);
-
-        //    if (preparation.ShouldShortCircuit)
-        //    {
-        //        return preparation.ShortCircuitResult!;
-        //    }
-
-        //    entity.DevEui = preparation.NormalizedDevEui!;
-        //    await _em300DiService.AddApiKeyAsync(entity, preparation.Device!.DevEui);
-        //    return Ok();
-        //}
     }
 }

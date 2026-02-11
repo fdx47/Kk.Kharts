@@ -51,7 +51,7 @@ namespace Kk.Kharts.Api.Repositories
         }
 
 
-        public async Task<IQueryable<Uc502Wet150>> GetUc502Wet150DataByDevEuiAsync(string devEui, AuthenticatedUserDto authenticatedUser)
+        public IQueryable<Uc502Wet150> GetUc502Wet150DataByDevEui(string devEui, AuthenticatedUserDto authenticatedUser)
         {
             // Caso o usuário tenha permissão, retornar os dados de Uc502Wet150 para o DevEui
             return _context.Uc502Wet150s.Where(x => x.DevEui == devEui);
@@ -74,12 +74,6 @@ namespace Kk.Kharts.Api.Repositories
 
 
         //**************************** Soil Parameters ****************************//
-
-        public async Task<IQueryable<SoilParameter>> GetUc502Wet150DataByDevEuiAsync(int id)
-        {
-            // Caso o usuário tenha permissão, retornar os dados de Uc502Wet150 para o DevEui
-            return _context.SoilParameters.Where(x => x.Id == id);
-        }
 
         public async Task AddMultiSensor2Async(Wet150MultiSensor2 entity)
         {

@@ -8,16 +8,11 @@ using Kk.Kharts.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
-using System.Text.RegularExpressions;
 
 namespace Kk.Kharts.Api.Controllers
 {
-    //[Route("api/v1/[controller]")]
     [Route("api/v1/users")]
     [ApiController]
-    //[Authorize]
-
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -78,77 +73,6 @@ namespace Kk.Kharts.Api.Controllers
             });
         }
 
-        //[Authorize(Roles = Roles.Root)]
-        //[HttpPost]
-        //public async Task<IActionResult> Post(UserCreateDTO dto)
-        //{
-        //    var validRoles = new List<string>
-        //    {
-        //        Roles.Root,
-        //        Roles.SuperAdmin,
-        //        Roles.Admin,
-        //        Roles.UserRW,
-        //        Roles.User,
-        //        Roles.Technician,
-        //        Roles.DemoRandom,
-        //        Roles.Demo
-        //    };
-
-        //    if (!validRoles.Contains(dto.Role))
-        //        return BadRequest(new { message = "Le rôle spécifié n'est pas valide." });
-
-        //    // 🔐 Se o role for Demo ou DemoRandom, verifica formato do e-mail
-        //    if ((dto.Role == Roles.Demo || dto.Role == Roles.DemoRandom) && !Regex.IsMatch(dto.Email, @"^\d{6}@kropkontrol\.com$"))
-        //    {
-        //        return BadRequest(new
-        //        {
-        //            message = "Pour les rôles Demo/DemoRandom, l’e-mail doit être au format ddmmyy@kropkontrol.com"
-        //        });
-        //    }
-
-        //    if (!IsValidPassword(dto.Password))
-        //        return BadRequest(new { message = "Le mot de passe doit comporter au moins 8 caractères, dont une majuscule, une minuscule, un chiffre et un caractère spécial."});
-
-        //    var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        //    if (existingUser != null)
-        //        return BadRequest(new { message = "L’e-mail est déjà utilisé." });
-
-        //    // Vérifie que la société existe
-        //    var company = await _context.Companies.FindAsync(dto.CompanyId);
-        //    if (company == null)
-        //        return BadRequest(new { message = "La société spécifiée n'existe pas." });
-
-        //    var utilisateur = new User
-        //    {
-        //        Nom = dto.Nom,
-        //        Email = dto.Email,
-        //        Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-        //        Role = dto.Role,
-        //        SignupDate = DateTime.UtcNow,
-        //        CompanyId = dto.CompanyId 
-        //    };
-
-        //    _context.Users.Add(utilisateur);
-        //    await _context.SaveChangesAsync();
-
-        //    var userDto = new UserDTO
-        //    {
-        //        Id = utilisateur.Id,
-        //        Nom = utilisateur.Nom,
-        //        Email = utilisateur.Email,
-        //        Role = utilisateur.Role,
-        //        DateEnregistrement = utilisateur.SignupDate
-        //    };
-
-        //    return Ok(new
-        //    {
-        //        message = "Utilisateur enregistré avec succès.",
-        //        user = userDto
-        //    });
-        //}
-
-
-
 
         [Authorize(Roles = Roles.Root)]
         [HttpPut("{id}")]
@@ -179,7 +103,6 @@ namespace Kk.Kharts.Api.Controllers
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMyAccount(UserUpdateSelfDTO dto)
         {
-            //var userIdFdx = int.Parse(User.FindFirst("nameid")?.Value ?? "0");  
             var userId = int.Parse(User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value ?? "0");
 
             var user = await _context.Users.FindAsync(userId);
@@ -264,23 +187,21 @@ namespace Kk.Kharts.Api.Controllers
         [HttpPost("request-password-reset")]
         public async Task<IActionResult> RequestPasswordReset([FromBody] string email)
         {
-            //var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-            //if (user == null)
-            //    return Ok(); // Para evitar enumeração de e-mails
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                return Ok(new { message = "Un lien de réinitialisation a été envoyé à votre adresse e-mail." });
 
             var token = Guid.NewGuid().ToString();
 
-            //var pending = new PendingPasswordReset
-            //{
-            //    UserId = user.Id,
-            //    Token = token,
-            //    RequestedAt = DateTime.UtcNow
-            //};
+            var pending = new PendingPasswordReset
+            {
+                UserId = user.Id,
+                Token = token,
+                RequestedAt = DateTime.UtcNow
+            };
 
-            //_context.PendingPasswordResets.Add(pending);
-            //await _context.SaveChangesAsync();
-
-            email = "carnbq@gmail.com";
+            _context.PendingPasswordResets.Add(pending);
+            await _context.SaveChangesAsync();
 
             var resetLink = $"https://kropkontrol.premiumasp.net/api/v1/Users/reset-password?token={token}";
 
@@ -309,15 +230,6 @@ namespace Kk.Kharts.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Votre mot de passe a été modifié avec succès.");
-        }
-
-
-        private bool IsValidPassword(string password)
-        {
-            // Regex - au moins 8 caractères, dont une majuscule, une minuscule, un chiffre et un caractère spécial.
-            var passwordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?""{}|<>]).{8,}$");
-            // Vérifie si la chaîne correspond à la regex
-            return passwordRegex.IsMatch(password);
         }
     }
 }

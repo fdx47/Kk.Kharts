@@ -1,11 +1,19 @@
-﻿using System.Text;
+﻿using Kk.Kharts.Api.Utility.Constants;
+using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Kk.Kharts.Api.Services.BackgroundServices
 {
     public class DailyLogProcessorService : BackgroundService
     {
-        private readonly string _logDir = Path.Combine(AppContext.BaseDirectory, "kklogs");
-        private readonly string _summaryFilePath = Path.Combine(AppContext.BaseDirectory, "kklogs", "totals.txt");
+        private readonly string _logDir = Path.Combine(AppContext.BaseDirectory, GlobalConstants.LogsDirectoryName);
+        private readonly string _summaryFilePath = Path.Combine(AppContext.BaseDirectory, GlobalConstants.LogsDirectoryName, "totals.txt");
+        private readonly ILogger<DailyLogProcessorService> _logger;
+
+        public DailyLogProcessorService(ILogger<DailyLogProcessorService> logger)
+        {
+            _logger = logger;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -18,7 +26,7 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
             //}
             //catch (Exception ex)
             //{
-            //    Console.WriteLine($"Erreur lors du traitement du journal quotidien : {ex.Message}");
+            //    _logger.LogError(ex, "Erreur lors du traitement du journal quotidien");
             //}
 
             while (!stoppingToken.IsCancellationRequested)
@@ -41,7 +49,7 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Erreur lors du traitement du journal quotidien : {ex.Message}");
+                    _logger.LogError(ex, "Erreur lors du traitement du journal quotidien");
                 }
             }
         }
@@ -54,7 +62,7 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
 
             if (!File.Exists(filePath))
             {
-                Console.WriteLine($"Fichier du jour précédent non trouvé : {filePath}");
+                _logger.LogInformation("Fichier du jour précédent non trouvé : {FilePath}", filePath);
                 return;
             }
 
@@ -152,7 +160,7 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
 
             await File.WriteAllTextAsync(_summaryFilePath, sb.ToString());
 
-            Console.WriteLine($"Fichier des totaux mis à jour : {_summaryFilePath}");
+            _logger.LogInformation("Fichier des totaux mis à jour : {FilePath}", _summaryFilePath);
         }
     }
 

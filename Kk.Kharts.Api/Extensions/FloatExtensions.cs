@@ -8,11 +8,5 @@
         {
             return Math.Abs(a - b) < tolerance;
         }
-
-        //public static bool IsNearlyEqualTo(this float value, float target, float tolerance = 0.1f)
-        //{
-        //    return Math.Abs(value - target) < tolerance;
-        //}
-
     }
 }

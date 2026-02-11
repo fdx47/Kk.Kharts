@@ -20,9 +20,11 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IDeviceRepository _deviceRepo;
         private readonly IAlarmRuleService _alarmService;
         private readonly ITelegramService _telegram;
+        private readonly IDeprecatedEndpointNotifier _deprecatedNotifier;
+        private readonly ILogger<DeviceController> _logger;
 
         public DeviceController(IDeviceService service, IUserContext userContext, IDeviceModelService serviceDeviceModels, IDeviceRepository deviceRepo,
-        IAlarmRuleService alarmService, ITelegramService telegram)
+        IAlarmRuleService alarmService, ITelegramService telegram, IDeprecatedEndpointNotifier deprecatedNotifier, ILogger<DeviceController> logger)
         {
             _deviceService = service;
             _userContext = userContext;
@@ -30,38 +32,8 @@ namespace Kk.Kharts.Api.Controllers
             _deviceRepo = deviceRepo;
             _alarmService = alarmService;
             _telegram = telegram;
-        }
-
-        private async Task NotifyDeprecatedUsageAsync(string endpoint, string? devEui = null)
-        {
-            Device? device = null;
-            string? normalized = null;
-
-            if (!string.IsNullOrWhiteSpace(devEui))
-            {
-                normalized = NormalizeDevEui(devEui);
-                try
-                {
-                    device = await _deviceService.GetDeviceByDevEuiApiKeyInternalAsync(normalized);
-                }
-                catch
-                {
-             
-                }
-            }
-
-            var description = device?.Description ?? "(sans description)";
-            var companyName = device?.Company?.Name ?? device?.CompanyId.ToString() ?? "(entreprise inconnue)";
-            var location = string.IsNullOrWhiteSpace(device?.InstallationLocation) ? "(localisation non renseignée)" : device!.InstallationLocation;
-
-            var msg = $"⚠️ Endpoint obsolète appelé : {endpoint}\n" +
-                      $"DevEui : {normalized ?? "(non fourni)"}\n" +
-                      $"Description : {description}\n" +
-                      $"Entreprise : {companyName}\n" +
-                      $"Site d’installation : {location}\n" +
-                      $"Horodatage : {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-
-            await _telegram.SendToDebugTopicAsync(msg);
+            _deprecatedNotifier = deprecatedNotifier;
+            _logger = logger;
         }
 
         /// <summary>
@@ -364,7 +336,7 @@ namespace Kk.Kharts.Api.Controllers
                 var device = await _deviceRepo.GetDeviceByDevEuiRepositoryAsync(devEui, authenticatedUser);
                 if (device == null)
                 {
-                    Console.WriteLine($"Dispositivo com DevEui {devEui} não encontrado.");
+                    _logger.LogWarning("Device avec DevEui={DevEui} non trouvé, seuils ignorés", devEui);
                     continue;
                 }
 
@@ -408,160 +380,9 @@ namespace Kk.Kharts.Api.Controllers
         }
 
 
-        ////////////////////////////////////////////////////////////
-        ///
-
-        //[HttpGet("api/v1/Device/GetAllDevices")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> AllDevicesObs()
-        //{
-
-        //    try
-        //    {
-        //        return await ProcessGetAllDevices();
-        //    }
-        //    finally
-        //    {
-        //        await NotifyDeprecatedUsageAsync("GET api/v1/Device/GetAllDevices");
-        //    }
-        //}
-
-        //[HttpGet("api/v1/Device/GetByDevEui")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> DeviceByDevEuiObs([FromQuery] string devEui)
-        //{
-        //    try
-        //    {
-        //        return await ProcessDeviceByDevEui(devEui);
-        //    }
-        //    finally
-        //    {
-        //        await NotifyDeprecatedUsageAsync("GET api/v1/Device/GetByDevEui", devEui);
-        //    }
-        //}
-
-        //[HttpGet("api/v1/Device/GetBattery")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> BatteryByDevEuiOBS([FromQuery] string devEui)
-        //{
-        //    try
-        //    {
-        //        return await ProcessBatteryByDevEui(devEui);
-        //    }
-        //    finally
-        //    {
-        //        await NotifyDeprecatedUsageAsync("GET api/v1/Device/GetBattery", devEui);
-        //    }
-        //}
-
-        //[HttpPut("api/v1/Device/ConfigDevice")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> UpdateDeviceObs(string devEui, [FromBody] DeviceConfigUpdateDTO dto)
-        //{
-        //    try
-        //    {
-        //        await NotifyDeprecatedUsageAsync("PUT api/v1/Device/ConfigDevice", devEui);
-        //        return await ProcessUpdateDevice(devEui, dto);
-        //    }
-        //    catch
-        //    {           // depois    
-        //    }
-
-        //    return await ProcessUpdateDevice(devEui, dto);
-        //}
-
-
-        //[HttpPost("api/v1/Device/Create")]
-        //[Authorize(Roles = "Root")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> CreateDeviceObs([FromBody] DeviceCreateDto dto)
-        //{
-        //    await NotifyDeprecatedUsageAsync("POST api/v1/Device/Create");
-        //    var result = await ProcessCreateDevice(dto);
-        //    await NotifyDeprecatedUsageAsync("POST api/v1/Device/Create");
-        //    return result;
-        //}
-
-        //[HttpGet("api/v1/Device/Model/GetAllModels")]
-        //[Authorize(Roles = "Root")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> GetAllObs()
-        //{
-        //    await NotifyDeprecatedUsageAsync("GET api/v1/Device/Model/GetAllModels");
-        //    var result = await ProcessGetAll();
-        //    await NotifyDeprecatedUsageAsync("GET api/v1/Device/Model/GetAllModels");
-        //    return result;
-        //}
-
-        //[HttpGet("api/v1/Device/Model/GetByDevEui")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> GetModelByDevEuiObs(string devEui)
-        //{
-
-        //    var result = await ProcessGetModelByDevEui(devEui);
-        //    await NotifyDeprecatedUsageAsync("GET api/v1/Device/Model/GetByDevEui", devEui);
-        //    return result;
-        //}
-
-        //[DenyAccessForRole(isWriteAccessRequired: true)]  // Exige role de leitura e escrita
-        //[HttpPost("api/v1/Device/ThresholdsAlarms/Post")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> PostThresholdsObs([FromBody] Dictionary<string, Dictionary<string, ThresholdDto>> payload)
-        //{
-
-        //    var result = await ProcessPostThresholds(payload);
-        //    await NotifyDeprecatedUsageAsync("POST api/v1/Device/ThresholdsAlarms/Post");
-        //    return result;
-        //}
-
-        //[Authorize(Roles = "Root")]
-        //[HttpGet("api/v1/Device/ThresholdsAlarms/GetAll")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> GetAllAlarmsObs()
-        //{
-
-        //    var result = await ProcesssGetAllAlarms();
-        //    await NotifyDeprecatedUsageAsync("GET api/v1/Device/ThresholdsAlarms/GetAll");
-        //    return result;
-        //}
-
-        //[DenyAccessForRole(isWriteAccessRequired: true)]  // Exige role de leitura e escrita
-        //[HttpGet("api/v1/Device/ThresholdsAlarms/GetByDevEui")]
-        //[Obsolete("Ce point de terminaison est obsolète et sera supprimé prochainement.")]
-        //public async Task<IActionResult> GetAlarmsByDevEuiObs(string devEui)
-        //{
-
-        //    var result = await ProcessGetAlarmsByDevEui(devEui);
-        //    await NotifyDeprecatedUsageAsync("GET api/v1/Device/ThresholdsAlarms/GetByDevEui", devEui);
-        //    return result;
-        //}
-
         private static string NormalizeDevEui(string devEui)
         {
             return string.IsNullOrWhiteSpace(devEui) ? devEui : devEui.Trim().ToUpperInvariant();
         }
     }
 }
-/*
-{
-  "24E124136D448042": {
-    "temperature": {
-      "Low": 30,
-      "High": 80,
-      "Hysteresis": 5
-    },
-    "minWoolVWC": {
-      "Low": 40,
-      "High": 85,
-      "Hysteresis": 7
-    }
-  },
-  "24E124136D448043": {
-    "temperature": {
-      "Low": 15,
-      "High": 30,
-      "Hysteresis": 3
-    }
-  }
-}
- */

@@ -97,7 +97,7 @@ app.use(Vue3Toastify, {
   draggable: true,
   showCloseButtonOnHover: false,
   hideProgressBar: false,
-  closeButton: 'button',
+  closeButton: true,
   icon: true,
   rtl: false
 })

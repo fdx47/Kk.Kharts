@@ -13,7 +13,6 @@ namespace Kk.Kharts.Api.Data
     public class AppDbContext : DbContext
     {
         private readonly IHttpContextAccessor _accessor;
-        //private readonly ILogger<AppDbContext> _logger;
 
         public string _schema { get; }
         public string _user_Id { get; }
@@ -55,16 +54,13 @@ namespace Kk.Kharts.Api.Data
 
         public DbSet<VpnProfile> VpnProfiles { get; set; }
 
-        public AppDbContext(DbContextOptions<AppDbContext> options, IConfiguration configuration, /*ILogger<AppDbContext> logger,*/ IHttpContextAccessor accessor) : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options, IConfiguration configuration, IHttpContextAccessor accessor) : base(options)
         {
-
-            //_logger = logger;
             _schema = configuration["ConnectionStrings:Schema"]!;
 
             if (string.IsNullOrWhiteSpace(_schema))
             {
-                //logger.LogWarning("Le schéma n’est pas défini dans appsettings.json. Une exception va être levée.");
-                throw new InvalidOperationException("Le schéma requis n’est pas défini dans la configuration.");
+                throw new InvalidOperationException("Le schéma requis n'est pas défini dans la configuration.");
             }
 
             _accessor = accessor;

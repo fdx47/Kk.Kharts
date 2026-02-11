@@ -1,5 +1,6 @@
 ﻿using Kk.Kharts.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Kk.Kharts.Api.Middlewares
 {
@@ -7,11 +8,13 @@ namespace Kk.Kharts.Api.Middlewares
     {
         private readonly RequestDelegate _next;
         private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<ApiKeyMiddleware> _logger;
 
-        public ApiKeyMiddleware(RequestDelegate next, IServiceProvider serviceProvider)
+        public ApiKeyMiddleware(RequestDelegate next, IServiceProvider serviceProvider, ILogger<ApiKeyMiddleware> logger)
         {
             _next = next;
             _serviceProvider = serviceProvider;
+            _logger = logger;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -22,10 +25,9 @@ namespace Kk.Kharts.Api.Middlewares
             if (path.StartsWithSegments("/Api/ApiKey"))
             {
                 // Exibe todos os headers recebidos
-                Console.WriteLine("Headers recebidos:");
                 foreach (var header in context.Request.Headers)
                 {
-                    Console.WriteLine($" {header.Key}: {header.Value}");
+                    _logger.LogDebug("ApiKey header: {Key}={Value}", header.Key, header.Value);
                 }
 
                 using var scope = _serviceProvider.CreateScope();
@@ -61,21 +63,3 @@ namespace Kk.Kharts.Api.Middlewares
         }
     }
 }
-
-
-
-
-
-////Resumo funcional:
-
-////Quando o cliente acessa uma rota que começa com /Api/ApiKey:
-
-////O middleware exibe todos os headers recebidos no console.
-
-////Acessa o banco de dados (AppDbContext) para buscar um usuário com chave de API registrada (campos HeaderName e HeaderValue).
-
-////Se não existir usuário com chave configurada, responde com 403 Forbidden.
-
-////Se o header esperado não estiver presente ou tiver valor incorreto, responde com 401 Unauthorized.
-
-////Caso tudo esteja válido, a requisição continua normalmente.

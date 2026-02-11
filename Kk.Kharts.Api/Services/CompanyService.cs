@@ -18,31 +18,6 @@ namespace Kk.Kharts.Api.Services
         }
 
 
-        public async Task<List<CompanyDto>> GetAllCompaniesAsyncOLD()
-        {
-            var companies = await _companyRepository.GetAllAsync();
-            //return companies.Select(c => new CompanyDto
-            //{
-            //    Id = c.Id,
-            //    Name = c.Name!,
-            //    ParentCompanyId = c.ParentCompanyId,
-            //    ParentCompanyName = c.ParentCompany?.Name,
-            //    SubsidiariesCount = c.Subsidiaries?.Count ?? 0
-            //}).ToList();
-
-
-            return [.. companies.Select(c => new CompanyDto
-            {
-                Id = c.Id,
-                Name = c.Name!,
-                ParentCompanyId = c.ParentCompanyId,
-                ParentCompanyName = c.ParentCompany?.Name,
-                SubsidiariesCount = c.Subsidiaries?.Count ?? 0
-            })];
-
-        }
-
-
         public async Task<List<CompanyDto>> GetAllCompaniesAsync()
         {
             var companies = await _companyRepository.GetAllAsync();
@@ -83,35 +58,11 @@ namespace Kk.Kharts.Api.Services
             return MapToDto(company);
         }
 
-        //public async Task<bool> DeleteCompanyAsync(int id)
-        //{
-        //    var company = await _companyRepository.GetByIdAsync(id);
-        //    if (company == null) return false;
-
-        //    await _companyRepository.DeleteAsync(company);
-        //    return true;
-        //}
-
-        //public async Task<bool> DisableCompanyAsync(int id)
-        //{
-        //    var company = await _companyRepository.GetByIdAsync(id);
-        //    if (company == null)
-        //        return false;
-
-        //    company.IsActive = false;
-        //    await _companyRepository.SaveChangesAsync();
-
-        //    return true;
-        //}
-
-
-
         public async Task<bool> DisableCompanyAsync(int id)
         {
             var defaultUser = new AuthenticatedUserDto { Role = "Root" };
             var company = await _companyRepository.GetByIdAsync(id, defaultUser);
             if (company == null)
-                //throw new NotFoundExceptionKk("Entreprise non trouvée.");
                 return false;
 
             company.IsActive = false;
