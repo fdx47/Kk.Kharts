@@ -52,6 +52,15 @@
               <i class="bi bi-rocket-takeoff"></i>
               Mise en service
             </button>
+            <button
+              class="nav-chip"
+              :class="{ active: $route.name === 'TwoFactorAuth' }"
+              @click="$router.push('/two-factor')"
+              title="Authentification à deux facteurs"
+            >
+              <i class="bi bi-shield-lock"></i>
+              2FA
+            </button>
           </div>
 
           <div class="toolbar-controls">
@@ -82,11 +91,13 @@ export default {
         case 'Dashboard':
           return 'Tableau de Bord Système'
         case 'Logs':
-          return 'Journaux Système'
+          return 'Atelier - Journaux Système'
         case 'VpnProfiles':
-          return 'Profils VPN'
+          return 'Atelier - Profils VPN'
         case 'MiseEnService':
-          return 'Atelier de Mise en Service'
+          return 'Atelier - Mise en Service'
+        case 'TwoFactorAuth':
+          return 'Atelier - Authentification 2FA'
         default:
           return 'KropKontrol Staff'
       }
@@ -102,6 +113,8 @@ export default {
           return 'KropKontrol • Gestion des profils VPN'
         case 'MiseEnService':
           return 'KropKontrol • Mise en service des Capteurs'
+        case 'TwoFactorAuth':
+          return 'KropKontrol • Authentification à deux facteurs'
         default:
           return 'KropKontrol • Portail Staff'
       }
@@ -117,6 +130,8 @@ export default {
           return 'bi bi-shield-lock'
         case 'MiseEnService':
           return 'bi bi-rocket-takeoff'
+        case 'TwoFactorAuth':
+          return 'bi bi-shield-lock-fill'
         default:
           return 'bi bi-grid'
       }

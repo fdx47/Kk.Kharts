@@ -15,6 +15,7 @@ import DashboardView from './views/DashboardView.vue'
 import VpnProfilesView from './views/VpnProfilesView.vue'
 import LogsView from './views/LogsView.vue'
 import MiseEnServiceView from './views/MiseEnServiceView.vue'
+import TwoFactorAuthView from './views/TwoFactorAuthView.vue'
 
 // Configuration du routeur
 const routes = [
@@ -46,6 +47,12 @@ const routes = [
     path: '/mise-en-service',
     name: 'MiseEnService',
     component: MiseEnServiceView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/two-factor',
+    name: 'TwoFactorAuth',
+    component: TwoFactorAuthView,
     meta: { requiresAuth: true }
   }
 ]
