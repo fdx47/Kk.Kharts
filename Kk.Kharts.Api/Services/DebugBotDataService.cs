@@ -41,13 +41,16 @@ public class DebugBotDataService(AppDbContext db) : IDebugBotDataService
 
         var dashboards = await db.Dashboards.CountAsync(ct);
 
-        var topCompanies = await db.Devices
+        var topCompanies = (await db.Devices
             .Where(d => d.ActiveInKropKontrol)
-            .GroupBy(d => d.Company!.Name ?? "N/A")
+            .Include(d => d.Company)
+            .Select(d => new { d.Company!.Name, Device = d })
+            .ToListAsync(ct))
+            .GroupBy(x => x.Name ?? "N/A")
             .Select(g => new CompanyDeviceCount(g.Key, g.Count()))
             .OrderByDescending(g => g.Count)
             .Take(5)
-            .ToListAsync(ct);
+            .ToList();
 
         return new DebugBotSystemStats(
             TotalActiveDevices: totalActiveDevices,

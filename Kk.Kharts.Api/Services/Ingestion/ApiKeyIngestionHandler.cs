@@ -107,12 +107,14 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 duplicateContext
             }, new JsonSerializerOptions { WriteIndented = true });
 
+            var contextSection = string.IsNullOrWhiteSpace(duplicateContext)
+                ? string.Empty
+                : $"{duplicateContext}\n\n";
+
             var message = $"""
                 🔄 <b>Donnée dupliquée détectée</b>
 
-                {duplicateContext}
-
-                <b>DevEUI:</b> <code>{device.DevEui}</code>
+                {contextSection}<b>DevEUI:</b> <code>{device.DevEui}</code>
                 <b>Device:</b> {device.Name}
                 <b>Description:</b> {device.Description}
                 <b>Localisation:</b> {device.InstallationLocation}

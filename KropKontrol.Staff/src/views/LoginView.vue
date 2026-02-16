@@ -71,9 +71,6 @@ export default {
           throw new Error(data?.message || 'Identifiants invalides')
         }
 
-        localStorage.setItem('authToken', data.token)
-        localStorage.setItem('refreshToken', data.refreshToken)
-
         toast.success('Connexion réussie')
         router.push('/')
       } catch (error) {

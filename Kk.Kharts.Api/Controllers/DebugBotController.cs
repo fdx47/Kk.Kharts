@@ -35,6 +35,19 @@ public class DebugBotController : ControllerBase
         NewerThan
     }
 
+    private static string EscapeHtml(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        return text
+            .Replace("&", "&amp;", StringComparison.Ordinal)
+            .Replace("<", "&lt;", StringComparison.Ordinal)
+            .Replace(">", "&gt;", StringComparison.Ordinal);
+    }
+
     private const string StaffWebAppUrl = "https://kropkontrol.com/staff/";
 
     private async Task HandleStaffCommandAsync(long chatId, bool isPrivateChat, CancellationToken ct, int? topicId = null)
@@ -200,7 +213,7 @@ Identifiants Root requis.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erreur du bot de debug lors du traitement de la commande : {Command}", text);
-            await SendMessageAsync(chatId, $"❌ Erreur: {ex.Message}", ct);
+            await SendMessageAsync(chatId, $"❌ Erreur: {EscapeHtml(ex.Message)}", ct);
         }
 
         return Ok();
@@ -266,8 +279,12 @@ Identifiants Root requis.
 
         foreach (var device in orderedDevices)
         {
-            sb.AppendLine($"📍 <b>{device.Name}</b> ({device.Company?.Name ?? "N/A"})");
-            sb.AppendLine($"    Dernier envoi : <i>{device.LastSendAt.ToHumanizeLastSentAt()}</i>\n");
+            var name = EscapeHtml(device.Name);
+            var companyName = EscapeHtml(device.Company?.Name ?? "N/A");
+            var lastSeen = EscapeHtml(device.LastSendAt.ToHumanizeLastSentAt());
+
+            sb.AppendLine($"📍 <b>{name}</b> ({companyName})");
+            sb.AppendLine($"    Dernier envoi : <i>{lastSeen}</i>\n");
         }
 
         await SendMessageAsync(chatId, sb.ToString(), ct, topicId);
@@ -399,9 +416,14 @@ Identifiants Root requis.
         foreach (var entry in filtered)
         {
             var device = entry.Device;
-            sb.AppendLine($"- <b>{device.Name}</b> ({device.Company?.Name ?? "N/A"})");
-            sb.AppendLine($"  DevEui: {device.DevEui}");
-            sb.AppendLine($"  ⚡️ Dernier envoi : <i>{device.LastSendAt.ToHumanizeLastSentAt()}</i>\n");
+            var name = EscapeHtml(device.Name);
+            var companyName = EscapeHtml(device.Company?.Name ?? "N/A");
+            var devEui = EscapeHtml(device.DevEui);
+            var lastSeen = EscapeHtml(device.LastSendAt.ToHumanizeLastSentAt());
+
+            sb.AppendLine($"- <b>{name}</b> ({companyName})");
+            sb.AppendLine($"  DevEui: {devEui}");
+            sb.AppendLine($"  ⚡️ Dernier envoi : <i>{lastSeen}</i>\n");
         }
 
         await SendMessageAsync(chatId, sb.ToString(), ct, topicId);
@@ -969,13 +991,13 @@ Identifiants Root requis.
         try
         {
             // Confirmer dans le topic Support
-            var confirmMsg = $"✅ <b>Réponse envoyée</b>\n\n🆔 Chat ID: <code>{targetChatId}</code>\n💬 Message: {replyMessage}";
+            var confirmMsg = $"✅ <b>Réponse envoyée</b>\n\n🆔 Chat ID: <code>{targetChatId}</code>\n💬 Message: {EscapeHtml(replyMessage)}";
             await SendToSupportTopicAsync(confirmMsg, ct);
         }
         catch (Exception ex)
         {
             // Erreur dans le topic Support
-            var errorMsg = $"❌ <b>Erreur d'envoi</b>\n\n🆔 Chat ID: <code>{targetChatId}</code>\n⚠️ Erreur: {ex.Message}";
+            var errorMsg = $"❌ <b>Erreur d'envoi</b>\n\n🆔 Chat ID: <code>{targetChatId}</code>\n⚠️ Erreur: {EscapeHtml(ex.Message)}";
             await SendToSupportTopicAsync(errorMsg, ct);
         }
     }

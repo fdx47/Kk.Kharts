@@ -9,5 +9,7 @@
         public string? ParentCompanyName { get; set; }
         public int SubsidiariesCount { get; set; }
         public bool IsActive { get; set; }
+        public string HeaderNameApiKey { get; set; } = string.Empty;
+        public string HeaderValueApiKey { get; set; } = string.Empty;
     }
 }

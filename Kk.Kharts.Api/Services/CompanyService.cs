@@ -1,5 +1,6 @@
 ﻿using Kk.Kharts.Api.Repositories.IRepository;
 using Kk.Kharts.Api.Services.IService;
+using Kk.Kharts.Api.Utility.Constants;
 using Kk.Kharts.Shared.DTOs;
 using Kk.Kharts.Shared.DTOs.Companies;
 using Kk.Kharts.Shared.Entities;
@@ -21,15 +22,16 @@ namespace Kk.Kharts.Api.Services
         public async Task<List<CompanyDto>> GetAllCompaniesAsync()
         {
             var companies = await _companyRepository.GetAllAsync();
-            return companies.Select(selector: MapToDto).ToList();
+            return companies.Select(company => MapToDto(company, includeApiKeys: true)).ToList();
         }
 
 
         public async Task<CompanyDto?> GetCompanyByIdAsync(int companyId, AuthenticatedUserDto? authenticatedUser = null)
         {
-            var userContext = authenticatedUser ?? new AuthenticatedUserDto { Role = "Root" };
+            var userContext = authenticatedUser ?? new AuthenticatedUserDto { Role = Roles.Root };
             var company = await _companyRepository.GetByIdAsync(companyId, userContext);
-            return company == null ? null : MapToDto(company);
+            var canViewApiKeys = string.Equals(userContext.Role, Roles.Root, StringComparison.OrdinalIgnoreCase);
+            return company == null ? null : MapToDto(company, includeApiKeys: canViewApiKeys);
         }
 
 
@@ -38,11 +40,13 @@ namespace Kk.Kharts.Api.Services
             var newCompany = new Company
             {
                 Name = dto.Name,
-                ParentCompanyId = dto.ParentCompanyId
+                ParentCompanyId = dto.ParentCompanyId,
+                HeaderNameApiKey = dto.HeaderNameApiKey?.Trim() ?? string.Empty,
+                HeaderValueApiKey = dto.HeaderValueApiKey?.Trim() ?? string.Empty
             };
 
             await _companyRepository.AddAsync(newCompany);
-            return MapToDto(newCompany);
+            return MapToDto(newCompany, includeApiKeys: true);
         }
 
 
@@ -53,9 +57,11 @@ namespace Kk.Kharts.Api.Services
 
             company.Name = dto.Name ?? string.Empty;
             company.ParentCompanyId = dto.ParentCompanyId;
+            company.HeaderNameApiKey = dto.HeaderNameApiKey?.Trim() ?? company.HeaderNameApiKey;
+            company.HeaderValueApiKey = dto.HeaderValueApiKey?.Trim() ?? company.HeaderValueApiKey;
 
             await _companyRepository.UpdateAsync(company);
-            return MapToDto(company);
+            return MapToDto(company, includeApiKeys: true);
         }
 
         public async Task<bool> DisableCompanyAsync(int id)
@@ -71,7 +77,7 @@ namespace Kk.Kharts.Api.Services
         }
 
 
-        private CompanyDto MapToDto(Company c)
+        private CompanyDto MapToDto(Company c, bool includeApiKeys = false)
         {
             return new CompanyDto
             {
@@ -81,7 +87,9 @@ namespace Kk.Kharts.Api.Services
                 ParentCompanyId = c.ParentCompanyId,
                 ParentCompanyName = c.ParentCompany?.Name,
                 SubsidiariesCount = c.Subsidiaries?.Count ?? 0,
-                IsActive = c.IsActive
+                IsActive = c.IsActive,
+                HeaderNameApiKey = includeApiKeys ? c.HeaderNameApiKey : string.Empty,
+                HeaderValueApiKey = includeApiKeys ? c.HeaderValueApiKey : string.Empty
             };
         }
 

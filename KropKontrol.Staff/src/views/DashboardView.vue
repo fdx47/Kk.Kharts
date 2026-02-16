@@ -160,7 +160,7 @@
               <div class="card chart-card compact-chart">
                 <div class="card-header"><h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Requêtes par Utilisateur</h5></div>
                 <div class="card-body">
-                  <div class="chart-shell chart-shell-md"><canvas ref="usersBarChart"></canvas></div>
+                  <div class="chart-shell chart-shell-md" :style="{ height: usersChartHeight + 'px' }"><canvas ref="usersBarChart"></canvas></div>
                 </div>
               </div>
             </div>
@@ -168,11 +168,11 @@
               <div class="card data-card user-mini-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                   <h5 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Détail Utilisateurs</h5>
-                  <small class="text-muted">Top 8 · cliquez pour filtrer</small>
+                  <small class="text-muted">Top utilisateurs · cliquez pour filtrer</small>
                 </div>
                 <div class="card-body">
                   <div class="user-mini-grid">
-                    <div v-for="user in analytics.users.slice(0, 8)" :key="user.name" class="mini-card" @click="selectedUser = user.name; onUserFilterChange()">
+                    <div v-for="user in analytics.users.slice(0, 20)" :key="user.name" class="mini-card" @click="selectedUser = user.name; onUserFilterChange()">
                       <div class="d-flex align-items-center gap-2">
                         <div class="mini-avatar" :style="{ background: getAvatarColor(user.name) }">{{ getInitials(user.name) }}</div>
                         <div class="flex-grow-1">
@@ -184,6 +184,11 @@
                         <span v-for="(count, method) in user.methods" :key="method" class="method-chip" :class="getMethodClass(method)">{{ method }} {{ count }}</span>
                       </div>
                     </div>
+                  </div>
+                  <div class="text-end mt-3" v-if="analytics.users.length > 20">
+                    <button class="btn btn-outline-primary btn-sm" @click="showUsersModal = true">
+                      Voir tous les utilisateurs ({{ analytics.users.length }})
+                    </button>
                   </div>
                 </div>
               </div>
@@ -685,6 +690,15 @@ export default {
       if (!userData?.firstSeenUtc || !userData?.lastSeenUtc) return 0
       return new Date(userData.lastSeenUtc) - new Date(userData.firstSeenUtc)
     }
+
+    const usersChartHeight = computed(() => {
+      const count = analytics.value?.users?.length || 0
+      if (count === 0) return 220
+      if (count <= 10) return 240
+      if (count <= 20) return 320
+      if (count <= 35) return 420
+      return 520
+    })
 
     const applyActiveFilters = () => {
       const search = activeSearch.value.trim().toLowerCase()
@@ -1262,8 +1276,28 @@ export default {
 </script>
 
 <style scoped>
-.dashboard { min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-.dashboard-main { padding: 2rem 0; }
+.dashboard { 
+  min-height: 100vh; 
+  background: radial-gradient(circle at 20% 10%, #e0e7ff 0%, #f0f4ff 25%, #fafbff 50%, #f8fafc 100%);
+  position: relative;
+}
+
+.dashboard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.08) 50%, rgba(236, 72, 153, 0.05) 100%);
+  pointer-events: none;
+}
+
+.dashboard-main { 
+  padding: 2rem 0; 
+  position: relative;
+  z-index: 1;
+}
 .dashboard-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.75rem; }
 .date-picker-wrapper { display: inline-block; }
 .date-input { width: 180px; cursor: pointer; }
@@ -1284,20 +1318,135 @@ export default {
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.stat-card { border: none; border-radius: 16px; padding: 1.5rem; color: white; display: flex; align-items: center; gap: 1rem; transition: transform 0.3s, box-shadow 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.1); height: 100%; }
-.stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
-.stat-devices { background: linear-gradient(135deg, #667eea, #764ba2); }
-.stat-offline { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.stat-users { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-.stat-alerts { background: linear-gradient(135deg, #fa709a, #fee140); }
-.stat-requests { background: linear-gradient(135deg, #43e97b, #38f9d7); }
-.stat-unique-users { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
-.stat-endpoints { background: linear-gradient(135deg, #fccb90, #d57eeb); }
-.stat-peak { background: linear-gradient(135deg, #f6d365, #fda085); }
-.stat-icon { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-.stat-content h3 { font-size: 2rem; font-weight: bold; margin: 0; }
-.stat-content span { opacity: 0.9; font-size: 0.875rem; }
-.stat-detail { margin-top: 0.25rem; font-size: 0.75rem; }
+.stat-card { 
+  border: none; 
+  border-radius: 20px; 
+  padding: 1.75rem; 
+  color: white; 
+  display: flex; 
+  align-items: center; 
+  gap: 1.25rem; 
+  transition: transform 0.3s, box-shadow 0.3s; 
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12); 
+  height: 100%; 
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  pointer-events: none;
+}
+
+.stat-card:hover { 
+  transform: translateY(-8px); 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2); 
+}
+
+.stat-devices { 
+  background: linear-gradient(135deg, #667eea, #764ba2); 
+  position: relative;
+}
+
+.stat-devices::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.stat-offline { 
+  background: linear-gradient(135deg, #f093fb, #f5576c); 
+}
+
+.stat-users { 
+  background: linear-gradient(135deg, #4facfe, #00f2fe); 
+}
+
+.stat-alerts { 
+  background: linear-gradient(135deg, #fa709a, #fee140); 
+}
+
+.stat-requests { 
+  background: linear-gradient(135deg, #43e97b, #38f9d7); 
+}
+
+.stat-unique-users { 
+  background: linear-gradient(135deg, #a18cd1, #fbc2eb); 
+}
+
+.stat-endpoints { 
+  background: linear-gradient(135deg, #fccb90, #d57eeb); 
+}
+
+.stat-peak { 
+  background: linear-gradient(135deg, #f6d365, #fda085); 
+}
+
+.stat-icon { 
+  width: 70px; 
+  height: 70px; 
+  background: rgba(255,255,255,0.25); 
+  border-radius: 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 1.6rem; 
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.stat-content { 
+  position: relative;
+  z-index: 1;
+}
+
+.stat-content h3 { 
+  font-size: 2.25rem; 
+  font-weight: 700; 
+  margin: 0; 
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-content span { 
+  opacity: 0.95; 
+  font-size: 0.9rem; 
+  font-weight: 500;
+}
+
+.stat-detail { 
+  margin-top: 0.5rem; 
+  font-size: 0.8rem; 
+}
+.stat-detail span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.3);
+}
+.stat-devices .stat-detail span {
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #ecfdf5 !important;
+}
 
 .chart-card, .data-card { border: none; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); height: 100%; display: flex; flex-direction: column; }
 .chart-card .card-header, .data-card .card-header { background: transparent; border-bottom: 1px solid #eee; padding: 1rem 1.5rem; }

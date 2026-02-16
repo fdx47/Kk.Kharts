@@ -124,9 +124,31 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
 
                         foreach (var notif in offlineNotifs)
                         {
-                            // Remove a mensagem "offline" que estava ativa no tópico do Telegram
-                            await _telegram.DeleteFromDeviceStatusTopicAsync(notif.MessageId, stoppingToken);
-                            notif.IsActive = false;
+                            try
+                            {
+                                // Remove a mensagem "offline" que estava ativa no tópico do Telegram
+                                await _telegram.DeleteFromDeviceStatusTopicAsync(notif.MessageId, stoppingToken);
+                                notif.IsActive = false;
+                            }
+                            catch (Exception ex)
+                            {
+                                var contexte = $"Suppression Telegram impossible (DevEui: {device.DevEui}, MessageId: {notif.MessageId}, NotificationId: {notif.Id})";
+                                _logger.LogWarning(ex, contexte);
+
+                                var detailMessage = $"""
+                                    ⚠️ <b>Suppression Telegram échouée</b>
+
+                                    • DevEui : {device.DevEui}
+                                    • Nom : {device.Name}
+                                    • Entreprise : {device.Company?.Name}
+                                    • NotificationId : {notif.Id}
+                                    • MessageId : {notif.MessageId}
+
+                                    Raison : {_telegram.EscapeHtml(ex.Message)}
+                                    """;
+
+                                await _telegram.SendToDebugTopicAsync(detailMessage, ct: stoppingToken);
+                            }
                         }
 
                         if (offlineNotifs.Count > 0)

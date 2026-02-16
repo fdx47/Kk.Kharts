@@ -14,6 +14,7 @@ import LoginView from './views/LoginView.vue'
 import DashboardView from './views/DashboardView.vue'
 import VpnProfilesView from './views/VpnProfilesView.vue'
 import LogsView from './views/LogsView.vue'
+import MiseEnServiceView from './views/MiseEnServiceView.vue'
 
 // Configuration du routeur
 const routes = [
@@ -40,6 +41,12 @@ const routes = [
     name: 'Logs',
     component: LogsView,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/mise-en-service',
+    name: 'MiseEnService',
+    component: MiseEnServiceView,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -50,39 +57,35 @@ const router = createRouter({
 
 // Guard de navigation pour vérifier l'authentification et le rôle Root
 router.beforeEach((to, from, next) => {
-  next()
-  
-  /*
   const token = localStorage.getItem('authToken')
-  
+
   if (to.meta.requiresAuth && !token) {
-    next('/login')
+    next({ path: '/login' })
+    return
   } else if (to.path === '/login' && token) {
-    next('/')
+    next({ path: '/' })
+    return
   } else if (to.meta.requiresAuth && token) {
-    // Vérifier si l'utilisateur est Root
     try {
       const decoded = jwtDecode(token)
       const role = decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
-      
+
       if (role !== 'Root') {
-        // Rediriger vers une page d'accès refusé ou logout
         localStorage.removeItem('authToken')
         localStorage.removeItem('refreshToken')
-        next('/login')
+        next({ path: '/login' })
         return
       }
     } catch (error) {
       localStorage.removeItem('authToken')
       localStorage.removeItem('refreshToken')
-      next('/login')
+      next({ path: '/login' })
       return
     }
     next()
   } else {
     next()
   }
-  */
 })
 
 const app = createApp(App)

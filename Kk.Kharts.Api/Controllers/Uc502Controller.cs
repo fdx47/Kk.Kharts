@@ -86,13 +86,8 @@ namespace Kk.Kharts.Api.Controllers
 
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
-            var prep = await _ingestionHandler.PrepareAsync(
-                this,
-                entity.DevEui,
-                "Mesure déjà reçue... [UC502]",
-                measurementTimestamp,
-                entity,
-                "<b>UC502 ▸ Wet150</b>");
+            //var prep = await _ingestionHandler.PrepareAsync( this, entity.DevEui, "Mesure déjà reçue... [UC502]",measurementTimestamp, entity, "<b>UC502 ▸ Wet150</b>");
+            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp, entity);
 
             if (prep.ShouldShortCircuit)
                 return prep.ShortCircuitResult!;
@@ -290,7 +285,8 @@ namespace Kk.Kharts.Api.Controllers
 
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
-            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp, entity, "<b>UC502 ▸ Modbus</b>");
+            //var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502]", measurementTimestamp, entity, "<b>UC502 ▸ Modbus</b>");
+            var prep = await _ingestionHandler.PrepareAsync(this, entity.DevEui, "Mesure déjà reçue... [UC502-Modbus]", measurementTimestamp, entity);
 
             if (prep.ShouldShortCircuit)
                 return prep.ShortCircuitResult!;
@@ -424,7 +420,7 @@ namespace Kk.Kharts.Api.Controllers
             }
 
             entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui);
-            await _deprecatedNotifier.NotifyAsync("POST api/ApiKey/v1/Uc502FromUg65WithApiKey/Wet150", entity.DevEui);
+            //await _deprecatedNotifier.NotifyAsync("POST api/ApiKey/v1/Uc502FromUg65WithApiKey/Wet150", entity.DevEui);
             return await ProcessPostWet150(entity, company);
         }
 
@@ -442,7 +438,7 @@ namespace Kk.Kharts.Api.Controllers
 
 
             entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui);
-            await _deprecatedNotifier.NotifyAsync("POST api/v1/Uc502/ApiKey/Wet150/SDI-12", entity.DevEui);
+            //await _deprecatedNotifier.NotifyAsync("POST api/v1/Uc502/ApiKey/Wet150/SDI-12", entity.DevEui);
             return await ProcessPostWet150(entity, company);
         }
 

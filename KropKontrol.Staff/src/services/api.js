@@ -34,14 +34,16 @@ if (false && typeof window !== 'undefined') {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const ACCESS_TOKEN_KEY = 'authToken'
+const REFRESH_TOKEN_KEY = 'refreshToken'
+const REFRESH_TOKEN_EXPIRY_KEY = 'refreshTokenExpiry'
+let refreshPromise = null
 
-// Instance Axios configurée
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   },
-  // Supprimer les logs par défaut
   validateStatus: () => true
 })
 
@@ -51,49 +53,142 @@ const ensureOk = (response) => {
   throw new Error(message)
 }
 
-// Intercepteur pour ajouter le token JWT
+const getStoredAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY)
+const getStoredRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY)
+const getStoredRefreshExpiry = () => localStorage.getItem(REFRESH_TOKEN_EXPIRY_KEY)
+
+const setAuthTokens = (token, refreshToken, refreshExpiry) => {
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token)
+  }
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  }
+  if (refreshExpiry) {
+    localStorage.setItem(REFRESH_TOKEN_EXPIRY_KEY, refreshExpiry)
+  }
+}
+
+const clearAuthData = () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_EXPIRY_KEY)
+}
+
+const redirectToLogin = () => {
+  clearAuthData()
+  window.location.href = '/staff/login'
+}
+
+const isRefreshTokenExpired = () => {
+  const expiry = getStoredRefreshExpiry()
+  if (!expiry) return false
+  return Date.now() >= new Date(expiry).getTime()
+}
+
+const isTokenExpiringSoon = (token, thresholdSeconds = 60) => {
+  if (!token) return true
+  try {
+    const decoded = jwtDecode(token)
+    if (!decoded?.exp) return true
+    const expiration = decoded.exp * 1000
+    return expiration - Date.now() <= thresholdSeconds * 1000
+  } catch {
+    return true
+  }
+}
+
+const refreshAccessToken = async () => {
+  if (refreshPromise) return refreshPromise
+
+  const currentRefreshToken = getStoredRefreshToken()
+  if (!currentRefreshToken) {
+    throw new Error('Aucun refresh token disponible')
+  }
+
+  if (isRefreshTokenExpired()) {
+    throw new Error('Refresh token expiré')
+  }
+
+  refreshPromise = (async () => {
+    const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
+      refreshToken: currentRefreshToken
+    })
+    ensureOk(response)
+
+    const { token, refreshToken, refreshTokenExpiryTime } = response.data || {}
+    if (!token || !refreshToken) {
+      throw new Error('Réponse de refresh invalide')
+    }
+
+    setAuthTokens(token, refreshToken, refreshTokenExpiryTime)
+    return token
+  })()
+
+  try {
+    return await refreshPromise
+  } catch (error) {
+    clearAuthData()
+    throw error
+  } finally {
+    refreshPromise = null
+  }
+}
+
+const ensureFreshToken = async () => {
+  const token = getStoredAccessToken()
+  if (!token) {
+    if (isRefreshTokenExpired()) {
+      clearAuthData()
+    }
+    return
+  }
+
+  if (isTokenExpiringSoon(token)) {
+    await refreshAccessToken()
+  }
+}
+
+const shouldSkipAuth = (url) => {
+  if (!url) return false
+  return url.includes('/auth/login') || url.includes('/auth/refresh-token')
+}
+
 apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('authToken')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-      // Debug: verificar se token está a ser enviado
-      if (config.url?.includes('/api/v1/users') || config.url?.includes('/api/v1/devices')) {
-        console.log('Token sent:', token.substring(0, 30) + '...')
+  async (config) => {
+    if (!shouldSkipAuth(config.url)) {
+      await ensureFreshToken()
+      const token = getStoredAccessToken()
+      if (token) {
+        config.headers = config.headers || {}
+        config.headers.Authorization = `Bearer ${token}`
       }
-    } else {
-      console.log('No token in localStorage')
     }
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
-// Intercepteur pour supprimer les logs de requêtes
-apiClient.interceptors.request.use(
-  (config) => {
-    // Supprimer les logs de requête
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
-
-// Intercepteur pour gérer les erreurs d'authentification et supprimer les logs de réponse
 apiClient.interceptors.response.use(
-  (response) => {
-    // Supprimer les logs de réponse
-    return response
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('refreshToken')
-      window.location.href = '/staff/login'
+  (response) => response,
+  async (error) => {
+    const status = error.response?.status
+    const originalRequest = error.config
+
+    if (status === 401 && !shouldSkipAuth(originalRequest?.url) && !originalRequest?._retry) {
+      try {
+        await refreshAccessToken()
+        originalRequest._retry = true
+        originalRequest.headers = originalRequest.headers || {}
+        originalRequest.headers.Authorization = `Bearer ${getStoredAccessToken()}`
+        return apiClient(originalRequest)
+      } catch {
+        redirectToLogin()
+      }
+    } else if (status === 401) {
+      redirectToLogin()
     }
+
     return Promise.reject(error)
   }
 )
@@ -107,15 +202,13 @@ export const authService = {
       email: normalizedEmail,
       password
     })
-    const { token, refreshToken } = response.data
-    localStorage.setItem('authToken', token)
-    localStorage.setItem('refreshToken', refreshToken)
+    const { token, refreshToken, refreshTokenExpiryTime } = response.data
+    setAuthTokens(token, refreshToken, refreshTokenExpiryTime)
     return response.data
   },
 
   logout() {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('refreshToken')
+    clearAuthData()
   },
 
   isAuthenticated() {
@@ -232,6 +325,16 @@ export const userService = {
   async getAll() {
     const response = await apiClient.get('/api/v1/users')
     return ensureOk(response).data
+  },
+
+  async creer(utilisateur) {
+    const response = await apiClient.post('/api/v1/users', utilisateur)
+    return ensureOk(response).data
+  },
+
+  async mettreAJour(id, utilisateur) {
+    const response = await apiClient.put(`/api/v1/users/${id}`, utilisateur)
+    return ensureOk(response).data
   }
 }
 
@@ -244,6 +347,16 @@ export const deviceService = {
 
   async getModels() {
     const response = await apiClient.get('/api/v1/devices/models')
+    return ensureOk(response).data
+  },
+
+  async creer(appareil) {
+    const response = await apiClient.post('/api/v1/devices', appareil)
+    return ensureOk(response).data
+  },
+
+  async mettreAJour(id, appareil) {
+    const response = await apiClient.put(`/api/v1/devices/${id}`, appareil)
     return ensureOk(response).data
   },
 
@@ -312,6 +425,16 @@ export const userStatsService = {
 export const companyService = {
   async getAll() {
     const response = await apiClient.get('/api/v1/companies')
+    return ensureOk(response).data
+  },
+
+  async creer(entreprise) {
+    const response = await apiClient.post('/api/v1/companies', entreprise)
+    return ensureOk(response).data
+  },
+
+  async mettreAJour(id, entreprise) {
+    const response = await apiClient.put(`/api/v1/companies/${id}`, entreprise)
     return ensureOk(response).data
   }
 }

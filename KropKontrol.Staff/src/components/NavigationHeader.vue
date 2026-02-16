@@ -9,11 +9,7 @@
             </div>
             <div class="title-text">
               <h1 class="h3 mb-1">{{ getPageTitle() }}</h1>
-              <p class="text-muted mb-1">{{ getPageSubtitle() }}</p>
-              <div class="header-meta">
-                <span class="badge-pill">Système</span>
-                <small class="text-muted">MàJ {{ lastUpdatedLabel }}</small>
-              </div>
+              <p class="text-muted mb-1">{{ getPageSubtitle() }}</p>             
             </div>
           </div>
         </div>
@@ -46,6 +42,15 @@
             >
               <i class="bi bi-shield-lock"></i>
               VPN
+            </button>
+            <button
+              class="nav-chip"
+              :class="{ active: $route.name === 'MiseEnService' }"
+              @click="$router.push('/mise-en-service')"
+              title="Mise en service"
+            >
+              <i class="bi bi-rocket-takeoff"></i>
+              Mise en service
             </button>
           </div>
 
@@ -80,6 +85,8 @@ export default {
           return 'Journaux Système'
         case 'VpnProfiles':
           return 'Profils VPN'
+        case 'MiseEnService':
+          return 'Atelier de Mise en Service'
         default:
           return 'KropKontrol Staff'
       }
@@ -88,13 +95,15 @@ export default {
     const getPageSubtitle = () => {
       switch (router.currentRoute.value.name) {
         case 'Dashboard':
-          return 'Monitoring en temps réel • KropKontrol'
+          return 'KropKontrol • Monitoring en temps réel'
         case 'Logs':
-          return 'Visualisation et analyse des logs • KropKontrol'
+          return 'KropKontrol • Visualisation et analyse des logs'
         case 'VpnProfiles':
-          return 'Gestion des profils VPN • KropKontrol'
+          return 'KropKontrol • Gestion des profils VPN'
+        case 'MiseEnService':
+          return 'KropKontrol • Mise en service des Capteurs'
         default:
-          return 'Portail Staff • KropKontrol'
+          return 'KropKontrol • Portail Staff'
       }
     }
 
@@ -106,6 +115,8 @@ export default {
           return 'bi bi-file-text'
         case 'VpnProfiles':
           return 'bi bi-shield-lock'
+        case 'MiseEnService':
+          return 'bi bi-rocket-takeoff'
         default:
           return 'bi bi-grid'
       }
@@ -252,6 +263,45 @@ export default {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.toolbar-controls :deep(.btn) {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.4rem 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.toolbar-controls :deep(.btn:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.18);
+}
+
+.toolbar-controls :deep(.btn-primary) {
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+.toolbar-controls :deep(.btn-primary:disabled) {
+  opacity: 0.75;
+  box-shadow: none;
+  transform: none;
+}
+
+.toolbar-controls :deep(.btn-outline-danger) {
+  border: 2px solid rgba(248, 113, 113, 0.8);
+  color: #b91c1c;
+  background-color: rgba(248, 113, 113, 0.08);
+}
+
+.toolbar-controls :deep(.btn-outline-danger:hover) {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  color: #fff;
+  border-color: transparent;
 }
 
 .logout-button {

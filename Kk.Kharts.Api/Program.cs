@@ -211,6 +211,10 @@ namespace Kk.Kharts.Api
 
                         Pour toute question, contactez info@kropkontrol.com
 
+                        ### Session Swagger
+
+                        <a href="/swagger/logout" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#ef4444;color:#fff;text-decoration:none;font-weight:600;">🚪 Logout Swagger</a>
+
                         """,
 
                     Contact = new OpenApiContact
