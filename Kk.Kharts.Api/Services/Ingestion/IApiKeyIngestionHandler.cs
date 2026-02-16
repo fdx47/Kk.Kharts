@@ -9,6 +9,18 @@ public interface IApiKeyIngestionHandler
         string? rawDevEui,
         string duplicateMessage,
         DateTime? measurementTimestampUtc = null,
-        object? payload = null,
-        string? duplicateContext = null);
+        object? payload = null
+        );
 }
+
+
+//public interface IApiKeyIngestionHandler
+//{
+//    Task<ApiKeyIngestionResult> PrepareAsync(
+//        ControllerBase controller,
+//        string? rawDevEui,
+//        string duplicateMessage,
+//        DateTime? measurementTimestampUtc = null,
+//        object? payload = null,
+//        string? duplicateContext = null);
+//}

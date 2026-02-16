@@ -34,8 +34,8 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         string? rawDevEui,
         string duplicateMessage,
         DateTime? measurementTimestampUtc = null,
-        object? payload = null,
-        string? duplicateContext = null)
+        object? payload = null//,
+      /*  string? duplicateContext = null*/)
     {
         if (!controller.ModelState.IsValid)
         {
@@ -71,8 +71,9 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 measurementTimestampUtc,
                 controller.HttpContext.Request.Path,
                 duplicateMessage,
-                payload,
-                duplicateContext);
+                payload//,
+                //duplicateContext
+                );
 
             await _duplicateMetrics.RecordDuplicateAsync(
                 normalizedDevEui, device.Name, device.CompanyName, controller.HttpContext.Request.Path);
@@ -91,8 +92,9 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         DateTime? measurementTimestampUtc,
         string endpoint,
         string duplicateMessage,
-        object? payload,
-        string? duplicateContext)
+        object? payload//,
+        //string? duplicateContext
+        )
     {
         try
         {
@@ -103,18 +105,36 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 timestamp = timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"),
                 lastSendAt = device.LastSendAt,
                 endpoint,
-                payload,
-                duplicateContext
+                payload//,
+                //duplicateContext
             }, new JsonSerializerOptions { WriteIndented = true });
 
-            var contextSection = string.IsNullOrWhiteSpace(duplicateContext)
-                ? string.Empty
-                : $"{duplicateContext}\n\n";
+            //var contextSection = string.IsNullOrWhiteSpace(duplicateContext) ? string.Empty: $"{duplicateContext}\n\n";
+
+            //var message = $"""
+            //    🔄 <b>Donnée dupliquée détectée</b>
+
+            //    {contextSection}<b>DevEUI:</b> <code>{device.DevEui}</code>
+            //    <b>Device:</b> {device.Name}
+            //    <b>Description:</b> {device.Description}
+            //    <b>Localisation:</b> {device.InstallationLocation}
+            //    <b>Entreprise:</b> {device.CompanyName ?? "N/A"}
+
+            //    <b>Timestamp reçu:</b> {timestamp:dd/MM/yyyy HH:mm:ss} UTC
+            //    <b>LastSendAt:</b> {device.LastSendAt}
+
+            //    <b>Endpoint:</b> <code>{endpoint}</code>
+
+            //    <i>{duplicateMessage}</i>
+
+            //    <pre>{jsonPayload}</pre>
+            //    """;
+
 
             var message = $"""
                 🔄 <b>Donnée dupliquée détectée</b>
 
-                {contextSection}<b>DevEUI:</b> <code>{device.DevEui}</code>
+                <b>DevEUI:</b> <code>{device.DevEui}</code>
                 <b>Device:</b> {device.Name}
                 <b>Description:</b> {device.Description}
                 <b>Localisation:</b> {device.InstallationLocation}

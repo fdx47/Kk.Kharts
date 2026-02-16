@@ -134,8 +134,7 @@ namespace Kk.Kharts.Api.Controllers
                 entity.DevEui,
                 "Mesure déjà reçue... [UC502]",
                 measurementTimestamp,
-                entity,
-                "<b>UC502 ▸ Wet150 Multi</b>");
+                entity);
 
             if (prep.ShouldShortCircuit)
                 return prep.ShortCircuitResult!;

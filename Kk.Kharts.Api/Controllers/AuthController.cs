@@ -17,6 +17,7 @@ namespace Kk.Kharts.Api.Controllers
         private readonly IConfiguration _configuration;
         private readonly IJwtService _jwtService;
         private readonly ITemporaryAccessTokenService _temporaryAccessTokenService;
+        private readonly ITwoFactorService _twoFactorService;
         private readonly ILogger<AuthController> _logger;
         private readonly int _refreshTokenExpirationDays;
 
@@ -24,12 +25,14 @@ namespace Kk.Kharts.Api.Controllers
             IUserService userService,
             IJwtService jwtService,
             ITemporaryAccessTokenService temporaryAccessTokenService,
+            ITwoFactorService twoFactorService,
             IConfiguration configuration,
             ILogger<AuthController> logger)
         {
             _userService = userService;
             _jwtService = jwtService;
             _temporaryAccessTokenService = temporaryAccessTokenService;
+            _twoFactorService = twoFactorService;
             _configuration = configuration;
             _logger = logger;
             _refreshTokenExpirationDays = configuration.GetValue<int>("Jwt:RefreshTokenExpirationDays", 1);
@@ -122,6 +125,31 @@ namespace Kk.Kharts.Api.Controllers
                 }
 
                 usedTemporaryPassword = true;
+            }
+
+            // Vérification 2FA si activé ou requis
+            if (utilisateur.TwoFactorEnabled || utilisateur.TwoFactorRequired)
+            {
+                // Si le code 2FA n'est pas fourni, retourner une réponse indiquant qu'il est requis
+                if (string.IsNullOrWhiteSpace(login.TwoFactorCode))
+                {
+                    return Ok(new TwoFactorRequiredResponseDTO
+                    {
+                        TwoFactorRequired = true,
+                        Message = "Code d'authentification à deux facteurs requis.",
+                        UserId = utilisateur.Id
+                    });
+                }
+
+                // Valider le code 2FA
+                if (!_twoFactorService.ValidateCode(utilisateur.TwoFactorSecret!, login.TwoFactorCode))
+                {
+                    return Unauthorized(new
+                    {
+                        Message = "Code d'authentification à deux facteurs invalide.",
+                        IsSuccess = false
+                    });
+                }
             }
 
             // Gerar o token JWT

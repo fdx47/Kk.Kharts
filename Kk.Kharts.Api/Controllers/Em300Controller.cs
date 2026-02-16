@@ -162,8 +162,9 @@ namespace Kk.Kharts.Api.Controllers
                 entity.DevEui,
                 "Mesure déjà reçue... [EM300 DI]",
                 entity.Timestamp,
-                entity,
-                "<b>EM300 ▸ DI</b>");
+                entity//,
+                //"<b>EM300 ▸ DI</b>"
+                );
 
             if (preparation.ShouldShortCircuit)
             {
@@ -203,8 +204,9 @@ namespace Kk.Kharts.Api.Controllers
                 entity.DevEui,
                 duplicateMessage,
                 entity.Timestamp,
-                entity,
-                "<b>EM300 ▸ TH</b>");
+                entity//,
+                //"<b>EM300 ▸ TH</b>"
+                );
             
             if (preparation.ShouldShortCircuit)
             {
