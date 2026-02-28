@@ -11,11 +11,13 @@ namespace Kk.Kharts.Api.Services
     {
         private readonly ICompanyRepository _companyRepository;
         private readonly IHashIdService _hashIdService;
+        private readonly IUserContext _userContext;
 
-        public CompanyService(ICompanyRepository repo, IHashIdService hashIdService)
+        public CompanyService(ICompanyRepository repo, IHashIdService hashIdService, IUserContext userContext)
         {
             _companyRepository = repo;
             _hashIdService = hashIdService;
+            _userContext = userContext;
         }
 
 
@@ -52,7 +54,8 @@ namespace Kk.Kharts.Api.Services
 
         public async Task<CompanyDto?> UpdateCompanyAsync(int id, CompanyUpdateDTO dto)
         {
-            var company = await _companyRepository.GetByIdAsync(id, null!);
+            var authenticatedUser = await _userContext.GetUserInfoFromToken();
+            var company = await _companyRepository.GetByIdAsync(id, authenticatedUser);
             if (company == null) return null;
 
             company.Name = dto.Name ?? string.Empty;

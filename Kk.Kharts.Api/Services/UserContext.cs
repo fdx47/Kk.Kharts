@@ -3,18 +3,19 @@ using Kk.Kharts.Api.Utility.Constants;
 using Kk.Kharts.Shared.DTOs;
 using Kk.Kharts.Shared.Enums;
 using System.Security.Claims;
+using Kk.Kharts.Api.Repositories.IRepository;
 
 namespace Kk.Kharts.Api.Services
 {
     public class UserContext : IUserContext
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ICompanyService _companyService;
+        private readonly ICompanyRepository _companyRepository;
 
-        public UserContext(IHttpContextAccessor httpContextAccessor, ICompanyService companyService)
+        public UserContext(IHttpContextAccessor httpContextAccessor, ICompanyRepository companyRepository)
         {
             _httpContextAccessor = httpContextAccessor;
-            _companyService = companyService;
+            _companyRepository = companyRepository;
         }
 
         public async Task<AuthenticatedUserDto> GetUserInfoFromToken()
@@ -45,7 +46,7 @@ namespace Kk.Kharts.Api.Services
             };
 
 
-            var company = await _companyService.GetCompanyByIdAsync(companyId, authenticatedUser);
+            var company = await _companyRepository.GetByIdAsync(companyId, authenticatedUser);
 
             if (company == null || !company.IsActive)
                 throw new UnauthorizedAccessException("Entreprise inactivée ou non trouvée.");
