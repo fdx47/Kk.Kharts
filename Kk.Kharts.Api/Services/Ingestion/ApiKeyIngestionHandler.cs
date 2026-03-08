@@ -106,10 +106,15 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
             var timestamp = measurementTimestampUtc ?? DateTime.UtcNow;
             var (lastSendAtUtc, delta, tolerance) = ExtraireDelta(device.LastSendAt, timestamp);
             var (permittivite, ecBulk, soilTemp) = ExtraireSdi12(payload);
+            var (sdi12Raw, batteryStr) = ExtraireSdi12EtBatterie(payload);
             var payloadNettoye = ConstruirePayloadSansKkTimestamp(payload);
 
+            var titre = string.IsNullOrWhiteSpace(duplicateMessage)
+                ? "Donnée dupliquée détectée"
+                : $"Donnée dupliquée détectée ({duplicateMessage})";
+
             var message = $"""
-                🔄 <b>Donnée dupliquée détectée</b>
+                🔄 <b>{titre}</b>
 
                 <b>DevEUI:</b> <code>{device.DevEui}</code>
                 <b>Id device:</b> {device.Id}
@@ -131,6 +136,10 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 - EC_bulk (dS/m)       : {ecBulk}
                 - Soil temperature (°C): {soilTemp}
 
+                <b>Mesures reçues (payload)</b>
+                - SDI-12 brut  : {sdi12Raw}
+                - Batterie     : {batteryStr}
+
                 <b>Payload reçu (brut)</b>
                 <pre>{payloadNettoye}</pre>
                 """;
@@ -141,6 +150,30 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         {
             _logger.LogError(ex, "Échec de l'envoi de la notification de doublon pour {DevEui}", device.DevEui);
         }
+    }
+
+    private static (string sdi12Raw, string batteryStr) ExtraireSdi12EtBatterie(object? payload)
+    {
+        const string na = "n/a";
+        if (payload is null) return (na, na);
+
+        var type = payload.GetType();
+        string sdi12Raw = na;
+        string battery = na;
+
+        var sdiProp = type.GetProperty("sdi12_1") ?? type.GetProperty("Sdi12_1") ?? type.GetProperty("SDI12_1");
+        if (sdiProp?.GetValue(payload) is string sdiVal && !string.IsNullOrWhiteSpace(sdiVal))
+        {
+            sdi12Raw = sdiVal.Replace("\r", string.Empty).Replace("\n", string.Empty);
+        }
+
+        var batteryProp = type.GetProperty("Battery") ?? type.GetProperty("battery") ?? type.GetProperty("batteryLevel");
+        if (batteryProp?.GetValue(payload) is not null)
+        {
+            battery = batteryProp.GetValue(payload)?.ToString() ?? na;
+        }
+
+        return (sdi12Raw, battery);
     }
 
     private static (DateTime? lastSendAtUtc, TimeSpan? delta, TimeSpan tolerance) ExtraireDelta(string? lastSendAt, DateTime timestamp)

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "HfSqlForwarder": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:62988;http://localhost:62989"
+    }
+  }
+}

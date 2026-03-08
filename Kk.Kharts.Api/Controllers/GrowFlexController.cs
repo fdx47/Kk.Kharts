@@ -22,10 +22,11 @@ public class GrowFlexController : ControllerBase
     }
 
     /// <summary>
-    /// Calcule la drainage d'une régie à partir des pulses DI et du volume d'eau utilisé (source externe).
+    /// Calcule la drainage d'une rang à partir des pulses EM300DI et du volume d'eau utilisé (API Externe).
     /// </summary>
     /// <param name="devEui">Identifiant unique du dispositif EM300-DI.</param>
     /// <param name="request">startAt, endAt, waterUsedLiters.</param>
+    /// <param name="ct">Token d'annulation.</param>
     [Authorize]
     [HttpPost("api/v1/growflex/mustache/drain-pluviometre")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -56,12 +57,13 @@ public class GrowFlexController : ControllerBase
 
 
     /// <summary>
-    /// Calcule le drainage sur un intervalle (sans persistance) pour affichage front.
+    /// Calcule le drainage sur un intervalle (sans persistance).
     /// </summary>
     /// <param name="devEui">Identifiant unique du dispositif EM300-DI.</param>
     /// <param name="startDate">Date de début (UTC ou avec offset).</param>
     /// <param name="endDate">Date de fin (UTC ou avec offset).</param>
     /// <param name="waterUsedLiters">Volume d'eau apporté (optionnel, défaut 0).</param>
+    /// <param name="ct">Token d'annulation.</param>
     [Authorize]
     [HttpGet("api/v1/growflex/mustache/drain-pluviometre")]
     [ProducesResponseType(StatusCodes.Status200OK)]
