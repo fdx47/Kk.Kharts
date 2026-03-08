@@ -92,6 +92,7 @@ namespace Kk.Kharts.Api
             // Manual registrations — name mismatch or special configuration
             builder.Services.AddScoped<IEmailService, SmtpEmailService>();
             builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
+            builder.Services.AddScoped<IWet150MulticapteurService, Wet150MulticapteurService>();
 
             builder.Services.AddHostedService<DeviceMonitorService>();
             builder.Services.AddHostedService<DailyLogProcessorService>();

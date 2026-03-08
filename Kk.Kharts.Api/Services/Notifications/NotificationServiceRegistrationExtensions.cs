@@ -9,7 +9,7 @@ public static class NotificationServiceRegistrationExtensions
     {
         services.AddSingleton<ITelegramNotificationRenderer, TelegramNotificationRenderer>();
         services.AddSingleton<IPushoverNotificationRenderer, PushoverNotificationRenderer>();
-        services.AddSingleton<AlertNotificationFactory>();
+        services.AddScoped<AlertNotificationFactory>();
 
         services.AddScoped<INotificationChannel, TelegramNotificationChannel>();
         services.AddScoped<INotificationChannel, PushoverNotificationChannel>();

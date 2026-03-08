@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Kk.Kharts.Api.Data;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
@@ -13,7 +14,9 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
         ITelegramService telegramService,
         ILogger<DeviceMonitorService> logger) : BackgroundService
     {
-        private readonly TimeSpan _deviceTimeout = TimeSpan.FromMinutes(20);
+        private static readonly TimeSpan TimeoutMinimal = TimeSpan.FromMinutes(2);
+        private static readonly TimeSpan TimeoutMaximal = TimeSpan.FromHours(1);
+        private static readonly TimeSpan TimeoutFallback = TimeSpan.FromMinutes(20);
         private readonly IKkTimeZoneService _timeZoneService = timeZoneService;
         private readonly ITelegramService _telegram = telegramService;
         private readonly ILogger<DeviceMonitorService> _logger = logger;
@@ -34,15 +37,25 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     var notificationService = scope.ServiceProvider.GetRequiredService<ITelegramAlarmNotificationService>();
 
-                    var cutoff = DateTime.UtcNow - _deviceTimeout;
-
                     var removalSummaries = new List<string>();
 
-                    // Busca dispositivos que pararam de comunicar há mais de 20min e ainda não tiveram alarme enviado
-                    var inactiveDevices = await dbContext.Devices
+                    // Récupère les devices actifs sans alarme
+                    var candidates = await dbContext.Devices
                         .Include(d => d.Company)
-                        .Where(d => d.ActiveInKropKontrol && d.LastSeenAt < cutoff && !d.HasCommunicationAlarm)
+                        .Where(d => d.ActiveInKropKontrol && !d.HasCommunicationAlarm)
                         .ToListAsync(stoppingToken);
+
+                    // Calcule un cutoff dynamique par device (pas mesuré * 3, borné) puis filtre
+                    var inactiveDevices = new List<Device>();
+                    foreach (var device in candidates)
+                    {
+                        var timeout = await CalculerTimeoutDynamiqueAsync(dbContext, device, stoppingToken);
+                        var cutoff = DateTime.UtcNow - timeout;
+                        if (device.LastSeenAt < cutoff)
+                        {
+                            inactiveDevices.Add(device);
+                        }
+                    }
 
 
                     foreach (var device in inactiveDevices)
@@ -92,11 +105,22 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
                         await notificationService.NotifyDeviceOfflineAsync(device, stoppingToken);
                     }
 
-                    // 2. Dispositivos que voltaram a comunicar
-                    var recoveredDevices = await dbContext.Devices
-                                    .Include(d => d.Company)
-                                    .Where(d => d.ActiveInKropKontrol && d.LastSeenAt >= cutoff && d.HasCommunicationAlarm)
-                                    .ToListAsync(stoppingToken);
+                    // 2. Dispositivos que voltaram a comunicar (avec alarme en cours)
+                    var candidatesRecovered = await dbContext.Devices
+                        .Include(d => d.Company)
+                        .Where(d => d.ActiveInKropKontrol && d.HasCommunicationAlarm)
+                        .ToListAsync(stoppingToken);
+
+                    var recoveredDevices = new List<Device>();
+                    foreach (var device in candidatesRecovered)
+                    {
+                        var timeout = await CalculerTimeoutDynamiqueAsync(dbContext, device, stoppingToken);
+                        var cutoff = DateTime.UtcNow - timeout;
+                        if (device.LastSeenAt >= cutoff)
+                        {
+                            recoveredDevices.Add(device);
+                        }
+                    }
 
 
                     foreach (var device in recoveredDevices)
@@ -111,7 +135,7 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
 
                             • Nom : {device.Name}
                             • Description : {device.Description}
-                            • Entreprise : {device.Company.Name}
+                            • Entreprise : {device.Company?.Name ?? "N/A"}
                             • DevEui : {device.DevEui}
 
                             ➡️ Communication rétablie le {parisTime:dd/MM/yy HH:mm:ss} (Paris)
@@ -153,7 +177,7 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
 
                         if (offlineNotifs.Count > 0)
                         {
-                            removalSummaries.Add($"• {device.Name} ({device.Company.Name}) : {offlineNotifs.Count} message(s)");
+                            removalSummaries.Add($"• {device.Name} ({device.Company?.Name ?? "N/A"}) : {offlineNotifs.Count} message(s)");
                         }
 
                         var recoveryMessageId = await _telegram.SendToDeviceStatusTopicWithIdAsync(recoveryMessage, ct: stoppingToken);
@@ -249,6 +273,58 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
             return nextHour - now;
         }
 
+        private static async Task<TimeSpan> CalculerTimeoutDynamiqueAsync(AppDbContext dbContext, Device device, CancellationToken ct)
+        {
+            var devEui = device.DevEui;
 
+            var timestamps = new List<DateTime>();
+            timestamps.Add(device.LastSeenAt);
+
+            async Task AjouterDerniersAsync<T>(IQueryable<T> query, System.Linq.Expressions.Expression<Func<T, DateTime>> selector)
+            {
+                var values = await query
+                    .OrderByDescending(selector)
+                    .Select(selector)
+                    .Take(5)
+                    .ToListAsync(ct);
+                timestamps.AddRange(values);
+            }
+
+            await AjouterDerniersAsync(dbContext.Uc502Wet150s.Where(d => d.DevEui == devEui), x => x.Timestamp);
+            await AjouterDerniersAsync(dbContext.Uc502sModbus.Where(d => d.DevEui == devEui), x => x.Timestamp);
+            await AjouterDerniersAsync(dbContext.Wet150MultiSensor2s.Where(d => d.DevEui == devEui), x => x.Timestamp);
+            await AjouterDerniersAsync(dbContext.Wet150MultiSensor3s.Where(d => d.DevEui == devEui), x => x.Timestamp);
+            await AjouterDerniersAsync(dbContext.Wet150MultiSensor4s.Where(d => d.DevEui == devEui), x => x.Timestamp);
+            await AjouterDerniersAsync(dbContext.Em300ths.Where(d => d.DevEui == devEui), x => x.Timestamp);
+            await AjouterDerniersAsync(dbContext.Em300Dis.Where(d => d.DevEui == devEui), x => x.Timestamp);
+
+            var distinctTs = timestamps
+                .Where(t => t != default)
+                .Distinct()
+                .OrderByDescending(t => t)
+                .ToList();
+
+            if (distinctTs.Count < 2)
+                return TimeoutFallback;
+
+            var deltas = new List<TimeSpan>();
+            for (int i = 0; i < distinctTs.Count - 1; i++)
+            {
+                var delta = (distinctTs[i] - distinctTs[i + 1]).Duration();
+                if (delta > TimeSpan.Zero)
+                    deltas.Add(delta);
+            }
+
+            if (deltas.Count == 0)
+                return TimeoutFallback;
+
+            var deltaMoyen = TimeSpan.FromTicks((long)deltas.Average(d => d.Ticks));
+            var timeout = TimeSpan.FromTicks(deltaMoyen.Ticks * 3);
+
+            if (timeout < TimeoutMinimal) timeout = TimeoutMinimal;
+            if (timeout > TimeoutMaximal) timeout = TimeoutMaximal;
+
+            return timeout;
+        }
     }
 }

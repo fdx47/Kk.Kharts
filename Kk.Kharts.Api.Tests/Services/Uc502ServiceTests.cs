@@ -9,6 +9,7 @@ using Kk.Kharts.Shared.DTOs.UC502.Wet150;
 using Kk.Kharts.Shared.Entities.UC502;
 using Kk.Kharts.Shared.Entities.UC502.Wet150MultiSensor;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Kk.Kharts.Api.Tests.Services;
@@ -24,6 +25,7 @@ public class Uc502ServiceTests
     private readonly Mock<IUserContext> _userContext;
     private readonly Mock<IDeviceService> _deviceService;
     private readonly Mock<IKkTimeZoneService> _timeZoneService;
+    private readonly Mock<IWet150MulticapteurService> _wet150MulticapteurService;
     private readonly Uc502Service _service;
 
     public Uc502ServiceTests()
@@ -33,15 +35,21 @@ public class Uc502ServiceTests
         _userContext = new Mock<IUserContext>();
         _deviceService = new Mock<IDeviceService>();
         _timeZoneService = new Mock<IKkTimeZoneService>();
+        _wet150MulticapteurService = new Mock<IWet150MulticapteurService>();
 
         var telegram = new Mock<ITelegramService>();
+        var logger = new Mock<ILogger<Uc502Service>>();
+        var loggerFactory = new Mock<ILoggerFactory>();
         _service = new Uc502Service(
             _repository.Object,
             _deviceRepository.Object,
             _userContext.Object,
             _deviceService.Object,
+            _wet150MulticapteurService.Object,
             telegram.Object,
-            _timeZoneService.Object);
+            _timeZoneService.Object,
+            logger.Object,
+            loggerFactory.Object);
     }
 
     [Fact]
@@ -107,10 +115,10 @@ public class Uc502ServiceTests
     [Fact]
     public async Task CalculAndAddAsync_WhenDuplicateKey_DoesNotThrowAndUpdatesStatus()
     {
-        // Arrange - Test idempotence: verify service handles duplicate key scenario gracefully
-        // Note: The actual exception handling (DbUpdateException with SqlException code 2627/2601)
-        // is tested at integration level with real database. Here we just verify the service
-        // has proper try-catch structure in place.
+        // Arrange - Tester l’idempotence : vérifier que le service gère correctement un scénario de clé dupliquée
+        // Remarque : La gestion réelle de l’exception (DbUpdateException avec SqlException code 2627/2601)
+        // est testée au niveau de l’intégration avec une vraie base de données. Ici, nous vérifions seulement
+        // que le service possède une structure try-catch appropriée.
         var devEui = "24E1249999999999";
         var payload = new PayloadWet150FromUg65WithApiKeyDTO
         {

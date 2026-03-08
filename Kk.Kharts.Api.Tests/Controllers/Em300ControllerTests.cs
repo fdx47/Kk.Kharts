@@ -8,6 +8,7 @@ using Kk.Kharts.Shared.DTOs.Em300.Em300Th;
 using Kk.Kharts.Shared.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Kk.Kharts.Api.Tests.Controllers;
@@ -19,19 +20,19 @@ public class Em300ControllerTests
         Mock<IEm300DiService> diService,
         Mock<IUserContext> userContext,
         Mock<IApiKeyIngestionHandler> ingestionHandler,
-        Mock<IDeviceService>? deviceService = null,
-        Mock<ITelegramService>? telegramService = null)
+        Mock<ILogger<Em300Controller>>? logger = null,
+        Mock<IDeprecatedEndpointNotifier>? deprecatedNotifier = null)
     {
-        deviceService ??= new Mock<IDeviceService>();
-        telegramService ??= new Mock<ITelegramService>();
+        logger ??= new Mock<ILogger<Em300Controller>>();
+        deprecatedNotifier ??= new Mock<IDeprecatedEndpointNotifier>();
 
         var controller = new Em300Controller(
             thService.Object,
             diService.Object,
             userContext.Object,
+            logger.Object,
             ingestionHandler.Object,
-            deviceService.Object,
-            telegramService.Object)
+            deprecatedNotifier.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -57,7 +58,7 @@ public class Em300ControllerTests
         var ingestionResult = ApiKeyIngestionResult.Success(company, device, device.DevEui, null);
 
         ingestionHandler
-            .Setup(h => h.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>()))
+            .Setup(h => h.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<object?>()))
             .ReturnsAsync(ingestionResult);
 
         var request = new Em300ThPostRequest
@@ -89,7 +90,7 @@ public class Em300ControllerTests
 
         var expectedResult = new StatusCodeResult(StatusCodes.Status208AlreadyReported);
         ingestionHandler
-            .Setup(h => h.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>()))
+            .Setup(h => h.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<object?>()))
             .ReturnsAsync(ApiKeyIngestionResult.FromShortCircuit(expectedResult));
 
         var request = new Em300ThPostRequest { DevEui = "24e1240000000001" };

@@ -7,12 +7,15 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
+using Kk.Kharts.Api.DependencyInjection;
+
 namespace Kk.Kharts.Api.Services.Telegram;
 
 /// <summary>
 /// Implementação do serviço de Telegram usando o package oficial Telegram.Bot.
 /// Suporta 2 bots: DebugBot (mensagens de sistema) e ClientBot (respostas a utilizadores).
 /// </summary>
+[SingletonService]
 public sealed class TelegramService : ITelegramService
 {
     private readonly TelegramBotClient _debugBotClient;

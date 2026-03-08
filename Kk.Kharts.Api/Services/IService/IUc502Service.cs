@@ -20,7 +20,7 @@ namespace Kk.Kharts.Api.Services.IService
         Task<bool> DeleteWet150ByIdAsync(DateTime timestamp, string devEui, AuthenticatedUserDto authenticatedUser);
 
         // Wet150 MultiSensor
-        Task ProcessPayloadWet150MultiSensorAsync(PayloadWet150MultiSensorFromUg65Dto dto, DeviceDto device);
+        Task ProcessPayloadWet150MultiSensorAsync(PayloadWet150MultiSensorFromUg65Dto dto, DeviceDto device, string endpoint);
         Task<Wet150MultiSensorResponseDTO> GetMultiSensor2ByDevEuiAsync(string devEui, DateTime startDate, DateTime endDate, AuthenticatedUserDto authenticatedUser);
        
     }

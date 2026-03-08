@@ -3,7 +3,7 @@ using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Shared.Entities.UC502.Wet150MultiSensor;
 using Kk.Kharts.Api.Repositories.IRepository;
 
-namespace Kk.Kharts.Api.Services
+namespace Kk.Kharts.Api.Services.Wet150
 {
 
     public class Wet150Sdi12MetadataService : IWet150Sdi12MetadataService

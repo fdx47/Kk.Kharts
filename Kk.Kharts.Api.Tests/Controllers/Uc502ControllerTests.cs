@@ -7,6 +7,7 @@ using Kk.Kharts.Shared.DTOs.UC502.Wet150;
 using Kk.Kharts.Shared.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Kk.Kharts.Api.Tests.Controllers;
@@ -22,6 +23,9 @@ public class Uc502ControllerTests
         Mock<IApiKeyIngestionHandler> ingestionHandler)
     {
         var telegramService = new Mock<ITelegramService>();
+        var deprecatedNotifier = new Mock<IDeprecatedEndpointNotifier>();
+        var duplicateMetrics = new Mock<IDuplicateMetricsService>();
+        var logger = new Mock<ILogger<Uc502Controller>>();
 
         var controller = new Uc502Controller(
             deviceService.Object,
@@ -30,7 +34,10 @@ public class Uc502ControllerTests
             userContext.Object,
             metadataService.Object,
             ingestionHandler.Object,
-            telegramService.Object)
+            telegramService.Object,
+            deprecatedNotifier.Object,
+            duplicateMetrics.Object,
+            logger.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -56,7 +63,7 @@ public class Uc502ControllerTests
         var company = new Company { Id = 2, Name = "Tenant" };
         var device = new DeviceDto { DevEui = "24E1249999999999", LastSendAt = string.Empty };
         ingestionHandler
-            .Setup(handler => handler.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>()))
+            .Setup(handler => handler.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<object?>()))
             .ReturnsAsync(ApiKeyIngestionResult.Success(company, device, device.DevEui, null));
 
         var dto = new PayloadWet150FromUg65WithApiKeyDTO
@@ -85,7 +92,7 @@ public class Uc502ControllerTests
 
         var forbiddenResult = new StatusCodeResult(StatusCodes.Status208AlreadyReported);
         ingestionHandler
-            .Setup(handler => handler.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>()))
+            .Setup(handler => handler.PrepareAsync(controller, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<object?>()))
             .ReturnsAsync(ApiKeyIngestionResult.FromShortCircuit(forbiddenResult));
 
         var dto = new PayloadWet150FromUg65WithApiKeyDTO

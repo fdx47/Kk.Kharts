@@ -14,8 +14,6 @@ using Kk.Kharts.Shared.Entities;
 using Kk.Kharts.Shared.Entities.UC502;
 using Kk.Kharts.Shared.Entities.UC502.Wet150MultiSensor;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace Kk.Kharts.Api.Services
 {
@@ -24,6 +22,7 @@ namespace Kk.Kharts.Api.Services
         IDeviceRepository deviceRepository,
         IUserContext userContext,
         IDeviceService deviceService,
+        IWet150MulticapteurService wet150MulticapteurService,
         ITelegramService telegram,
         IKkTimeZoneService timeZoneService,
         ILogger<Uc502Service> logger,
@@ -33,6 +32,7 @@ namespace Kk.Kharts.Api.Services
         private readonly IDeviceRepository _deviceRepository = deviceRepository;
         private readonly IUserContext _userContext = userContext;
         private readonly IDeviceService _deviceService = deviceService;
+        private readonly IWet150MulticapteurService _wet150MulticapteurService = wet150MulticapteurService;
         private readonly IKkTimeZoneService _timeZoneService = timeZoneService;
         private readonly ILogger<Uc502Service> _logger = logger;
         private readonly ILoggerFactory _loggerFactory = loggerFactory;
@@ -144,72 +144,60 @@ namespace Kk.Kharts.Api.Services
             var device = await _deviceRepository.GetDeviceByIdApiKeyAsync(devEui);
 
             if (payload.Battery >= 99.9f && device != null)
-            {
-                payload.Battery = device.Battery; // Atualiza a bateria do em300Th com o valor do dispositivo
-            }
+                payload.Battery = device.Battery;
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-
-            var listaResultados = new List<CalculationResult>();
-            var payloadWET150 = new Uc502Wet150();
             var measurementTimestamp = payload.Timestamp == default
                 ? DateTime.UtcNow
                 : payload.Timestamp.ToUniversalTime();
+
             payload.Timestamp = measurementTimestamp;
             var measurementTimestampString = measurementTimestamp.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
+            payload.SDI12_1 = payload.SDI12_1?.Replace("\r", "").Replace("\n", "");
 
+            var resultatsCalcul = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, measurementTimestamp, payload.DevEui, _deviceService, telegram, _timeZoneService, _loggerFactory);
 
-            if (payload != null)
+            if (resultatsCalcul == null || resultatsCalcul.Count == 0)
             {
-                payload.SDI12_1 = payload.SDI12_1?.Replace("\r", "").Replace("\n", "");
-
-                listaResultados = await SdiToVwcEc.CalcValueSdiToVwcEcAsync(payload, measurementTimestamp, payload.DevEui, _deviceService, telegram, _timeZoneService, _loggerFactory);
-
-                // Se a lista estiver vazia (valores inválidos), não salvar no banco
-                if (listaResultados == null || listaResultados.Count == 0)
-                {
-                    _logger.LogInformation("Dados ignorados para DevEui: {DevEui} - valores inválidos detectados", payload.DevEui);
-                    return null!;
-                }
-
-                payloadWET150.Timestamp = measurementTimestamp;
-                payloadWET150.DevEui = payload.DevEui;
-                payloadWET150.DeviceId = payload.Id;
-                payloadWET150.DeviceId = device!.Id;
-
-                payloadWET150.Permittivite = listaResultados[0].Permittivite;
-                payloadWET150.ECb = listaResultados[0].ECb;
-                payloadWET150.SoilTemperature = listaResultados[0].SoilTemperature;
-
-                payloadWET150.MineralVWC = listaResultados[0].VWC;
-                payloadWET150.OrganicVWC = listaResultados[1].VWC;
-                payloadWET150.PeatMixVWC = listaResultados[2].VWC;
-                payloadWET150.CoirVWC = listaResultados[3].VWC;
-                payloadWET150.MinWoolVWC = listaResultados[4].VWC;
-                payloadWET150.PerliteVWC = listaResultados[5].VWC;
-
-                payloadWET150.MineralECp = listaResultados[0].ECp;
-                payloadWET150.OrganicECp = listaResultados[1].ECp;
-                payloadWET150.PeatMixECp = listaResultados[2].ECp;
-                payloadWET150.CoirECp = listaResultados[3].ECp;
-                payloadWET150.MinWoolECp = listaResultados[4].ECp;
-                payloadWET150.PerliteECp = listaResultados[5].ECp;
-
-                payloadWET150.Battery = payload.Battery ?? 69.69f;
-
+                _logger.LogInformation("Données ignorées pour DevEui: {DevEui} - valeurs invalides détectées", payload.DevEui);
+                return null!;
             }
 
-            await ExecuteIdempotentAsync(() => _uc502Repository.AddEntityAndSaveAsync(payloadWET150));  // Chama o repositório para adicionar o Uc502Wet150
+            var entiteWet150 = ConstruireEntiteWet150(payload, device, measurementTimestamp, resultatsCalcul);
 
-            if (payload != null && payload.DevEui != null)
+            await ExecuteIdempotentAsync(() => _uc502Repository.AddEntityAndSaveAsync(entiteWet150));
+            await _deviceRepository.UpdateDeviceStatusAsync(payload.DevEui, payload.Battery ?? 69.69f, measurementTimestampString, DateTime.UtcNow, TimeSpan.Zero);
+            return entiteWet150;
+        }
+
+        private static Uc502Wet150 ConstruireEntiteWet150(
+            PayloadWet150FromUg65WithApiKeyDTO chargeUtile,
+            Device? appareil,
+            DateTime horodatageMesure,
+            IReadOnlyList<CalculationResult> resultatsCalcul)
+        {
+            return new Uc502Wet150
             {
-                 await _deviceRepository.UpdateDeviceStatusAsync(payload.DevEui, payload.Battery ?? 69.69f, measurementTimestampString, DateTime.UtcNow, TimeSpan.Zero);
-            }
-            return payloadWET150;
+                Timestamp = horodatageMesure,
+                DevEui = chargeUtile.DevEui,
+                DeviceId = appareil!.Id,
+                Permittivite = resultatsCalcul[0].Permittivite,
+                ECb = resultatsCalcul[0].ECb,
+                SoilTemperature = resultatsCalcul[0].SoilTemperature,
+                MineralVWC = resultatsCalcul[0].VWC,
+                OrganicVWC = resultatsCalcul[1].VWC,
+                PeatMixVWC = resultatsCalcul[2].VWC,
+                CoirVWC = resultatsCalcul[3].VWC,
+                MinWoolVWC = resultatsCalcul[4].VWC,
+                PerliteVWC = resultatsCalcul[5].VWC,
+                MineralECp = resultatsCalcul[0].ECp,
+                OrganicECp = resultatsCalcul[1].ECp,
+                PeatMixECp = resultatsCalcul[2].ECp,
+                CoirECp = resultatsCalcul[3].ECp,
+                MinWoolECp = resultatsCalcul[4].ECp,
+                PerliteECp = resultatsCalcul[5].ECp,
+                Battery = chargeUtile.Battery ?? 69.69f
+            };
         }
 
 
@@ -304,152 +292,10 @@ namespace Kk.Kharts.Api.Services
 
 
 
-        // Post - Método com validação e complemento
-        public async Task ProcessPayloadWet150MultiSensorAsyncDEV(PayloadWet150MultiSensorFromUg65Dto dto, DeviceDto device)
+        public Task ProcessPayloadWet150MultiSensorAsyncDEV(PayloadWet150MultiSensorFromUg65Dto dto, DeviceDto device)
         {
-            // Extrai apenas sdi12_1 a sdi12_4 (ignora outras chaves inválidas)
-            var measurementTimestamp = dto.Timestamp == default ? DateTime.UtcNow : dto.Timestamp.ToUniversalTime();
-            dto.Timestamp = measurementTimestamp;
-            var measurementTimestampString = measurementTimestamp.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-            var sdi12Fields = dto.ExtraFieldsSdi12
-                .Where(f => f.Key.StartsWith("sdi12_", StringComparison.OrdinalIgnoreCase) &&
-                            int.TryParse(f.Key.Substring(6), out int idx) && idx >= 1 && idx <= 4)
-                .ToDictionary(f => f.Key.ToLower(), f => f.Value.GetString()?.Trim());
-
-            int sentCount = sdi12Fields.Count;
-
-            // Verifica se devEUI está presente (obrigatório)
-            if (string.IsNullOrWhiteSpace(dto.DevEui))
-            {
-                throw new InvalidSensorConfigurationExceptionKk(
-                    "Le champ devEUI est obligatoire.",
-                    "POST /api/payload/wet150",
-                    sentCount,
-                    dto.DevEui,
-                    device.Name,
-                    device.Description,
-                    device.CompanyName
-                );
-            }
-
-            if (sentCount < 2 || sentCount > 4)
-            {
-                throw new InvalidSensorConfigurationExceptionKk(
-                    $"Nombre de champs SDI-12 envoyés invalide : {sentCount} (doit être entre 2 et 4).",
-                    "POST /api/payload/wet150",
-                    sentCount,
-                    dto.DevEui,
-                    device.Name,
-                    device.Description,
-                    device.CompanyName
-                );
-            }
-
-            // Regex ajustada: permite ID + 2 a 4 valores (2 a 4 '+', total 3 a 5 partes)
-            var regex = new Regex(@"^\d{1,2}(\+\d+(\.\d+)?){2,4}$");
-
-            // Busca os últimos valores do DB para complemento
-            var lastValues = await _uc502Repository.GetLastSdi12ValuesAsync(dto.DevEui);
-
-            // Prepara valores validados para os campos enviados apenas (baseado em sentCount)
-            var validatedSdi12 = new Dictionary<string, string?>();
-            var sentKeys = sdi12Fields.Keys.ToList();  // Chaves enviadas (ex.: sdi12_1, sdi12_2)
-
-            for (int i = 1; i <= sentCount; i++)  // Só processa até sentCount (ex.: para sent=2, só 1 e 2)
-            {
-                var key = $"sdi12_{i}";
-                if (!sentKeys.Contains(key)) continue;  // Garante ordem, mas só se enviado
-
-                string? newValue = sdi12Fields[key];
-
-                if (string.IsNullOrWhiteSpace(newValue))
-                {
-                    // Vazio: usa último do DB se disponível, senão null (permitido para primeiro envio)
-                    validatedSdi12[key] = lastValues.TryGetValue(key, out var last) && !string.IsNullOrWhiteSpace(last) ? last : null;
-                    continue;
-                }
-
-                // Não vazio: valida formato
-                if (regex.IsMatch(newValue))
-                {
-                    validatedSdi12[key] = newValue;  // Válido: usa novo
-                    continue;
-                }
-                else
-                {
-                    // Inválido: usa último do DB, lança se não disponível
-                    if (lastValues.TryGetValue(key, out var last) && !string.IsNullOrWhiteSpace(last))
-                    {
-                        validatedSdi12[key] = last;
-                    }
-                    else
-                    {
-                        throw new InvalidSensorConfigurationExceptionKk(
-                            $"Ligne SDI-12 invalide pour {key} : `{newValue}`. Aucun valeur précédente disponible dans la base. Format attendu : ID+valeur1+valeur2(+valeur3+valeur4)? (ex: 2+63.625+29.5+22.68).",
-                            "POST /api/payload/wet150",
-                            sentCount,
-                            dto.DevEui,
-                            device.Name,
-                            device.Description,
-                            device.CompanyName
-                        );
-                    }
-                }
-            }
-
-            // Cria e salva entidade baseada no sentCount (com possíveis nulls)
-            if (sentCount == 2)
-            {
-                var entity = new Wet150MultiSensor2
-                {
-                    Timestamp = dto.Timestamp,
-                    DevEui = dto.DevEui,
-                    Battery = device.Battery,
-                    DeviceId = device.Id,
-                    Sdi12_1 = validatedSdi12.GetValueOrDefault("sdi12_1"),
-                    Sdi12_2 = validatedSdi12.GetValueOrDefault("sdi12_2"),
-                };
-                await ExecuteIdempotentAsync(() => _uc502Repository.AddMultiSensor2Async(entity));
-            }
-            else if (sentCount == 3)
-            {
-                var entity = new Wet150MultiSensor3
-                {
-                    Timestamp = dto.Timestamp,
-                    DevEui = dto.DevEui,
-                    Battery = device.Battery,
-                    DeviceId = device.Id,
-                    Sdi12_1 = validatedSdi12.GetValueOrDefault("sdi12_1"),
-                    Sdi12_2 = validatedSdi12.GetValueOrDefault("sdi12_2"),
-                    Sdi12_3 = validatedSdi12.GetValueOrDefault("sdi12_3"),
-                };
-                await ExecuteIdempotentAsync(() => _uc502Repository.AddMultiSensor3Async(entity));
-            }
-            else if (sentCount == 4)
-            {
-                var entity = new Wet150MultiSensor4
-                {
-                    Timestamp = dto.Timestamp,
-                    DevEui = dto.DevEui,
-                    Battery = device.Battery,
-                    DeviceId = device.Id,
-                    Sdi12_1 = validatedSdi12.GetValueOrDefault("sdi12_1"),
-                    Sdi12_2 = validatedSdi12.GetValueOrDefault("sdi12_2"),
-                    Sdi12_3 = validatedSdi12.GetValueOrDefault("sdi12_3"),
-                    Sdi12_4 = validatedSdi12.GetValueOrDefault("sdi12_4"),
-                };
-                await ExecuteIdempotentAsync(() => _uc502Repository.AddMultiSensor4Async(entity));
-            }
-
-            // Update device status se pelo menos um campo enviado
-            if (sentCount > 0)
-            {
-                if (dto.Battery >= 99.9f)
-                    dto.Battery = device.Battery;
-
-                await _deviceRepository.UpdateDeviceStatusAsync(device.DevEui, dto.Battery ?? 69.69f, measurementTimestampString, DateTime.UtcNow, TimeSpan.Zero);
-            }
+            const string endpoint = "POST api/v1/uc502/wet150/multisensor";
+            return ProcessPayloadWet150MultiSensorAsync(dto, device, endpoint);
         }
 
 
@@ -457,82 +303,14 @@ namespace Kk.Kharts.Api.Services
         //***************************************************************************************************
         //                                                Post
         // **************************************************************************************************
-        public async Task ProcessPayloadWet150MultiSensorAsync(PayloadWet150MultiSensorFromUg65Dto dto, DeviceDto device)
+        public async Task ProcessPayloadWet150MultiSensorAsync(PayloadWet150MultiSensorFromUg65Dto dto, DeviceDto device, string endpoint)
         {
-            var endpoint = "POST api/v1/uc502/wet150/multisensor";
-
-            // Filtra os campos que começam com "sdi12_"
-            var measurementTimestamp = dto.Timestamp == default ? DateTime.UtcNow : dto.Timestamp.ToUniversalTime();
-            dto.Timestamp = measurementTimestamp;
-            var measurementTimestampString = measurementTimestamp.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-            var sdi12Fields = dto.ExtraFieldsSdi12
-                             .Where(f => f.Key.StartsWith("sdi12_", StringComparison.OrdinalIgnoreCase))
-                             .ToDictionary(f => f.Key.ToLower(), f => f.Value.GetString()?.Trim());
-
-            int count = sdi12Fields.Values.Count(v => !string.IsNullOrWhiteSpace(v));
-
-            // validação do formato dos dados SDI-12
-            var rawSensorData = string.Join("\n", sdi12Fields.Values.Where(v => !string.IsNullOrWhiteSpace(v)));
-            SensorDataValidator.ValidateFormatOrThrow(rawSensorData, endpoint, dto.DevEui, count, device.Name, device.Description, device.CompanyName);
-
-            if (count == 2)
-            {
-                var entity = new Wet150MultiSensor2
-                {
-                    Timestamp = dto.Timestamp,
-                    DevEui = dto.DevEui,
-                    Battery = device.Battery,
-                    DeviceId = device.Id,
-                    Sdi12_1 = sdi12Fields.GetValueOrDefault("sdi12_1"),
-                    Sdi12_2 = sdi12Fields.GetValueOrDefault("sdi12_2"),
-                };
-
-                await ExecuteIdempotentAsync(() => _uc502Repository.AddMultiSensor2Async(entity));
-            }
-            else if (count == 3)
-            {
-                var entity = new Wet150MultiSensor3
-                {
-                    Timestamp = dto.Timestamp,
-                    DevEui = dto.DevEui,
-                    Battery = device.Battery,
-                    DeviceId = device.Id,
-                    Sdi12_1 = sdi12Fields.GetValueOrDefault("sdi12_1"),
-                    Sdi12_2 = sdi12Fields.GetValueOrDefault("sdi12_2"),
-                    Sdi12_3 = sdi12Fields.GetValueOrDefault("sdi12_3"),
-                };
-
-                await ExecuteIdempotentAsync(() => _uc502Repository.AddMultiSensor3Async(entity));
-            }
-            else if (count == 4)
-            {
-                var entity = new Wet150MultiSensor4
-                {
-                    Timestamp = dto.Timestamp,
-                    DevEui = dto.DevEui,
-                    Battery = device.Battery,
-                    DeviceId = device.Id,
-                    Sdi12_1 = sdi12Fields.GetValueOrDefault("sdi12_1"),
-                    Sdi12_2 = sdi12Fields.GetValueOrDefault("sdi12_2"),
-                    Sdi12_3 = sdi12Fields.GetValueOrDefault("sdi12_3"),
-                    Sdi12_4 = sdi12Fields.GetValueOrDefault("sdi12_4"),
-                };
-
-                await ExecuteIdempotentAsync(() => _uc502Repository.AddMultiSensor4Async(entity));
-            }
-            else
-            {
-                throw new InvalidSensorConfigurationExceptionKk(
-                    $"Nombre de champs SDI-12 invalide : {count} reçus, mais le système accepte uniquement entre 2 et 4 champs. Veuillez vérifier la configuration du capteur.",
-                    endpoint, count, dto.DevEui, device.Name, device.Description, device.CompanyName
-                );
-            }
+            await ExecuteIdempotentAsync(() => _wet150MulticapteurService.TraiterAsync(dto, device, endpoint));
 
             if (dto.Battery >= 99.9f)
-                dto.Battery = device!.Battery;
+                dto.Battery = device.Battery;
 
-            await _deviceRepository.UpdateDeviceStatusAsync(device.DevEui, dto.Battery ?? 69.69f, measurementTimestampString, DateTime.UtcNow, TimeSpan.Zero);
+            await _deviceRepository.UpdateDeviceStatusAsync(device.DevEui, dto.Battery ?? 69.69f, dto.Timestamp.ToString("yyyy-MM-ddTHH:mm:ssZ"), DateTime.UtcNow, TimeSpan.Zero);
         }
 
 
@@ -551,81 +329,74 @@ namespace Kk.Kharts.Api.Services
                 .OrderBy(x => x.Timestamp)
                 .ToList();
 
-            var result = new Wet150MultiSensorResponseDTO
-            {
-                DevEui = devEui,
-                DeviceId = device.Id,
-                Name = device.Name ?? string.Empty,
-                Description = device.Description ?? string.Empty,
-                InstallationLocation = device.InstallationLocation ?? string.Empty,
-                Model = model
-            };
-
+            var result = CreerReponseMulticapteur(device, model);
             var sdi12MetadataList = await _uc502Repository.GetSdi12MetadataByDevEuiAsync(devEui);
-
-            result.Sdi12_1_Metadata = sdi12MetadataList
-                .Where(m => m.Sdi12Index == 1)
-                .Select(m => new Sdi12MetadataDto
-                {
-                    Index = m.Sdi12Index,
-                    Name = m.Sdi12Name,
-                    InstallationLocation = m.Sdi12InstallationLocation ?? string.Empty
-                }).FirstOrDefault() ?? new Sdi12MetadataDto { Index = 1, Name = "SDI-12 1", InstallationLocation = string.Empty };
-
-            result.Sdi12_2_Metadata = sdi12MetadataList
-                .Where(m => m.Sdi12Index == 2)
-                .Select(m => new Sdi12MetadataDto
-                {
-                    Index = m.Sdi12Index,
-                    Name = m.Sdi12Name,
-                    InstallationLocation = m.Sdi12InstallationLocation ?? string.Empty
-                }).FirstOrDefault() ?? new Sdi12MetadataDto { Index = 2, Name = "SDI-12 2", InstallationLocation = string.Empty };
-
-            if (result.Model >= 63)
-            {
-                result.Sdi12_3_Metadata = sdi12MetadataList
-                    .Where(m => m.Sdi12Index == 3)
-                    .Select(m => new Sdi12MetadataDto
-                    {
-                        Index = m.Sdi12Index,
-                        Name = m.Sdi12Name,
-                        InstallationLocation = m.Sdi12InstallationLocation ?? string.Empty
-                    }).FirstOrDefault();
-            }
-
-            if (result.Model == 64)
-            {
-                result.Sdi12_4_Metadata = sdi12MetadataList
-                    .Where(m => m.Sdi12Index == 4)
-                    .Select(m => new Sdi12MetadataDto
-                    {
-                        Index = m.Sdi12Index,
-                        Name = m.Sdi12Name,
-                        InstallationLocation = m.Sdi12InstallationLocation ?? string.Empty
-                    }).FirstOrDefault();
-            }
-
-
-
+            AffecterMetadonneesSdi12(result, sdi12MetadataList);
 
             foreach (var entity in filteredEntities)
             {
-                // Processar SDI12_1
                 await AddSensorDataAsync(result.Sdi12_1, entity.Sdi12_1!, entity.Timestamp, devEui, entity.Battery);
-
-                // Processar SDI12_2
                 await AddSensorDataAsync(result.Sdi12_2, entity.Sdi12_2!, entity.Timestamp, devEui, entity.Battery);
 
-                // SDI12_3 (modelo 63+)
                 if (model >= 63 && !string.IsNullOrEmpty(entity.Sdi12_3))
                     await AddSensorDataAsync(result.Sdi12_3!, entity.Sdi12_3, entity.Timestamp, devEui, entity.Battery);
 
-                // SDI12_4 (modelo 64)
                 if (model == 64 && !string.IsNullOrEmpty(entity.Sdi12_4))
                     await AddSensorDataAsync(result.Sdi12_4!, entity.Sdi12_4, entity.Timestamp, devEui, entity.Battery);
             }
 
             return result;
+        }
+
+        private static Wet150MultiSensorResponseDTO CreerReponseMulticapteur(DeviceDto appareil, int modele)
+        {
+            return new Wet150MultiSensorResponseDTO
+            {
+                DevEui = appareil.DevEui,
+                DeviceId = appareil.Id,
+                Name = appareil.Name ?? string.Empty,
+                Description = appareil.Description ?? string.Empty,
+                InstallationLocation = appareil.InstallationLocation ?? string.Empty,
+                Model = modele
+            };
+        }
+
+        private static void AffecterMetadonneesSdi12(Wet150MultiSensorResponseDTO reponse, List<Wet150Sdi12Metadata> metadonnees)
+        {
+            reponse.Sdi12_1_Metadata = ConstruireMetadonneeSdi12(metadonnees, 1, true);
+            reponse.Sdi12_2_Metadata = ConstruireMetadonneeSdi12(metadonnees, 2, true);
+
+            if (reponse.Model >= 63)
+                reponse.Sdi12_3_Metadata = ConstruireMetadonneeSdi12(metadonnees, 3, false);
+
+            if (reponse.Model == 64)
+                reponse.Sdi12_4_Metadata = ConstruireMetadonneeSdi12(metadonnees, 4, false);
+        }
+
+        private static Sdi12MetadataDto ConstruireMetadonneeSdi12(List<Wet150Sdi12Metadata> metadonnees, int index, bool obligatoire)
+        {
+            var metadonnee = metadonnees
+                .Where(m => m.Sdi12Index == index)
+                .Select(m => new Sdi12MetadataDto
+                {
+                    Index = m.Sdi12Index,
+                    Name = m.Sdi12Name,
+                    InstallationLocation = m.Sdi12InstallationLocation ?? string.Empty
+                })
+                .FirstOrDefault();
+
+            if (metadonnee != null)
+                return metadonnee;
+
+            if (!obligatoire)
+                return new Sdi12MetadataDto { Index = index, Name = string.Empty, InstallationLocation = string.Empty };
+
+            return new Sdi12MetadataDto
+            {
+                Index = index,
+                Name = $"SDI-12 {index}",
+                InstallationLocation = string.Empty
+            };
         }
 
         private async Task AddSensorDataAsync(List<Wet150SensorDataDto> targetList, string sdiPayload, DateTime timestamp, string devEui, float battery)

@@ -140,7 +140,8 @@ namespace Kk.Kharts.Api.Controllers
                 return prep.ShortCircuitResult!;
 
             entity.DevEui = prep.NormalizedDevEui!;
-            await _uc502Service.ProcessPayloadWet150MultiSensorAsync(entity, prep.Device!);
+            const string endpoint = "POST api/v1/uc502/wet150/multisensor";
+            await _uc502Service.ProcessPayloadWet150MultiSensorAsync(entity, prep.Device!, endpoint);
             return Ok(new { success = true });
         }
 

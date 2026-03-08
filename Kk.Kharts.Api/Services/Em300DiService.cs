@@ -9,6 +9,7 @@ using Kk.Kharts.Shared.DTOs.Interfaces;
 using Kk.Kharts.Shared.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Telegram.Bot.Types.Enums;
 
 namespace Kk.Kharts.Api.Services
 {
@@ -104,7 +105,8 @@ namespace Kk.Kharts.Api.Services
                                  $"Payload:\n{payloadSerialized}\n\n\n" +
                                  $"❌ Le payload contient des valeurs de température et d’humidité égales à zéro.";
 
-                await telegram.SendToDebugTopicAsync(message);
+                // Évite l'interprétation HTML par Telegram (les chevrons dans le message déclenchent une erreur)
+                await telegram.SendToDebugTopicAsync(message, ParseMode.None);
 
                 // Lève une exception pour interrompre le flux et avertir le contrôleur.
                 throw new LogMiniTelagramExceptionKk("Le payload contient des valeurs de température et d’humidité égales à zéro.");
