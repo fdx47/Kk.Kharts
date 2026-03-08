@@ -10,6 +10,8 @@ namespace Kk.Kharts.Api.Data.Configurations
         {
 
             builder.ToTable("devices");
+            builder.HasIndex(p => p.DevEui)
+                .HasDatabaseName("IX_devices_dev_eui");
 
             builder.Property(p => p.Id)
                    .HasColumnOrder(1)

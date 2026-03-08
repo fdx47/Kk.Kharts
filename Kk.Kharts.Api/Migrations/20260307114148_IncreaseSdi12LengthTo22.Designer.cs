@@ -4,6 +4,7 @@ using Kk.Kharts.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Kk.Kharts.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260307114148_IncreaseSdi12LengthTo22")]
+    partial class IncreaseSdi12LengthTo22
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -267,7 +270,7 @@ namespace Kk.Kharts.Api.Migrations
                         new
                         {
                             Id = 1,
-                            DeviceId = new Guid("a7f39352-fe08-462a-a408-014a9e01356d"),
+                            DeviceId = new Guid("98240ba7-0c4a-466e-95b7-4cd2d1aed64d"),
                             HeaderNameApiKey = "",
                             HeaderValueApiKey = "",
                             IsActive = true,
@@ -276,7 +279,7 @@ namespace Kk.Kharts.Api.Migrations
                         new
                         {
                             Id = 2,
-                            DeviceId = new Guid("53fc5825-3ab8-437a-b288-dffb224cea76"),
+                            DeviceId = new Guid("35718ac9-e605-40c3-b3c9-85e9e0aa6500"),
                             HeaderNameApiKey = "",
                             HeaderValueApiKey = "",
                             IsActive = true,
@@ -285,7 +288,7 @@ namespace Kk.Kharts.Api.Migrations
                         new
                         {
                             Id = 3,
-                            DeviceId = new Guid("18292749-47d1-4fab-8d1b-c90b024db207"),
+                            DeviceId = new Guid("069938af-d57f-44e2-81cc-19da8e4995d5"),
                             HeaderNameApiKey = "",
                             HeaderValueApiKey = "",
                             IsActive = true,
@@ -294,7 +297,7 @@ namespace Kk.Kharts.Api.Migrations
                         new
                         {
                             Id = 4,
-                            DeviceId = new Guid("10800e5b-f529-4e6d-a52e-f0fe1503a544"),
+                            DeviceId = new Guid("e3aaa4ec-02ca-4a48-b522-09712a2a3d33"),
                             HeaderNameApiKey = "",
                             HeaderValueApiKey = "",
                             IsActive = true,
@@ -303,7 +306,7 @@ namespace Kk.Kharts.Api.Migrations
                         new
                         {
                             Id = 5,
-                            DeviceId = new Guid("277ea002-30a7-4c93-89d3-f21f5e3e9db4"),
+                            DeviceId = new Guid("75a380c6-865b-405a-aaf0-81947612a67d"),
                             HeaderNameApiKey = "",
                             HeaderValueApiKey = "",
                             IsActive = true,
@@ -419,9 +422,6 @@ namespace Kk.Kharts.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
-
-                    b.HasIndex("DevEui")
-                        .HasDatabaseName("IX_devices_dev_eui");
 
                     b.HasIndex("DeviceModel");
 
@@ -1292,9 +1292,6 @@ namespace Kk.Kharts.Api.Migrations
 
                     b.HasIndex("DeviceId");
 
-                    b.HasIndex("DevEui", "Timestamp")
-                        .HasDatabaseName("IX_em300_th_dev_eui_timestamp");
-
                     b.ToTable("em300_th", "kropkharts");
                 });
 
@@ -1339,9 +1336,6 @@ namespace Kk.Kharts.Api.Migrations
                     b.HasKey("Timestamp", "DevEui");
 
                     b.HasIndex("DeviceId");
-
-                    b.HasIndex("DevEui", "Timestamp")
-                        .HasDatabaseName("IX_em300_di_dev_eui_timestamp");
 
                     b.ToTable("em300_di", "kropkharts");
                 });
@@ -1794,9 +1788,6 @@ namespace Kk.Kharts.Api.Migrations
                     b.HasKey("Timestamp", "DevEui");
 
                     b.HasIndex("DeviceId");
-
-                    b.HasIndex("DevEui", "Timestamp")
-                        .HasDatabaseName("IX_wets_150_dev_eui_timestamp");
 
                     b.ToTable("wets_150", "kropkharts");
                 });

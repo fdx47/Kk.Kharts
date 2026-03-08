@@ -32,6 +32,7 @@ const messages = {
       dashboard: 'Tableau de bord',
       devices: 'Capteurs',
       alerts: 'Alertes',
+      drainage: 'Drainage',
       support: 'Support',
       settings: 'Paramètres'
     },
@@ -133,6 +134,7 @@ const messages = {
       dashboard: 'Dashboard',
       devices: 'Sensors',
       alerts: 'Alerts',
+      drainage: 'Drainage',
       support: 'Support',
       settings: 'Settings'
     },

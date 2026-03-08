@@ -41,6 +41,12 @@ const routes: RouteRecordRaw[] = [
         name: 'settings',
         component: () => import('@/pages/SettingsPage.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: 'drainage',
+        name: 'drainage',
+        component: () => import('@/pages/DrainPluviometrePage.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   },

@@ -16,7 +16,7 @@ namespace Kk.Kharts.Api.Services.IService
         // Wet 150
         Task<Uc502Wet150ResponseDTO> GetFilteredDataByDeviEuiAsync(string devEui, DateTime startDate, DateTime endDate, AuthenticatedUserDto authenticatedUser);
         Task<Uc502Wet150> AddAsync(Uc502Wet150DTO entity);
-        Task<Uc502Wet150> CalculAndAddAsync(PayloadWet150FromUg65WithApiKeyDTO payloadJson, string devEui);
+        Task<Uc502Wet150> CalculAndAddAsync(PayloadWet150FromUg65WithApiKeyDTO payloadJson, DeviceDto device);
         Task<bool> DeleteWet150ByIdAsync(DateTime timestamp, string devEui, AuthenticatedUserDto authenticatedUser);
 
         // Wet150 MultiSensor

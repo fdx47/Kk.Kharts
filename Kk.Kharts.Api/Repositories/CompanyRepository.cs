@@ -107,7 +107,7 @@ namespace Kk.Kharts.Api.Repositories
                 .FirstOrDefaultAsync(
                     company => company.HeaderNameApiKey != null &&
                                company.HeaderValueApiKey != null &&
-                               company.HeaderNameApiKey.ToUpper() == sanitizedHeaderName.ToUpper() &&
+                               company.HeaderNameApiKey == sanitizedHeaderName &&
                                company.HeaderValueApiKey == sanitizedHeaderValue,
                     cancellationToken);
         }

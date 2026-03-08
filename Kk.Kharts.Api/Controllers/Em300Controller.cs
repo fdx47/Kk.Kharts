@@ -3,7 +3,6 @@ using Kk.Kharts.Api.DTOs.Requests.Em300;
 using Kk.Kharts.Api.Services.Ingestion;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Utils;
-using Kk.Kharts.Shared.DTOs.Em300.Em300Di;
 using Kk.Kharts.Shared.DTOs.Em300.Em300Th;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -63,6 +62,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
+                HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
                 devEui = DevEuiNormalizer.Normalize(devEui);
                 var authenticatedUser = await _userContext.GetUserInfoFromToken();
 
@@ -122,6 +122,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
+                HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
                 devEui = DevEuiNormalizer.Normalize(devEui);
                 var authenticatedUser = await _userContext.GetUserInfoFromToken();
 
@@ -163,7 +164,7 @@ namespace Kk.Kharts.Api.Controllers
                 "Mesure déjà reçue... [EM300 DI]",
                 entity.Timestamp,
                 entity//,
-                //"<b>EM300 ▸ DI</b>"
+                      //"<b>EM300 ▸ DI</b>"
                 );
 
             if (preparation.ShouldShortCircuit)
@@ -177,7 +178,7 @@ namespace Kk.Kharts.Api.Controllers
             return Ok();
         }
 
-            
+
         ////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////// terminaisons est obsolètes //////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -190,7 +191,7 @@ namespace Kk.Kharts.Api.Controllers
         [HttpPost("api/v1/Em300/TH/ApiKey/HttpsUg65")]
         public async Task<IActionResult> PostThHttpsUg65Obs([FromBody] Em300ThPostRequest request)
         {
-            var entity = request.ToDto();           
+            var entity = request.ToDto();
             var result = await ProcessEm300ThAsync(entity, "Mesure déjà reçue...");
             await _deprecatedNotifier.NotifyAsync("POST api/v1/Em300/TH/ApiKey/HttpsUg65", entity.DevEui);
             return result;
@@ -205,9 +206,9 @@ namespace Kk.Kharts.Api.Controllers
                 duplicateMessage,
                 entity.Timestamp,
                 entity//,
-                //"<b>EM300 ▸ TH</b>"
+                      //"<b>EM300 ▸ TH</b>"
                 );
-            
+
             if (preparation.ShouldShortCircuit)
             {
                 return preparation.ShortCircuitResult!;

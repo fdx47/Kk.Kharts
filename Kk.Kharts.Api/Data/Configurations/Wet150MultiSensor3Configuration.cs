@@ -17,9 +17,9 @@ namespace Kk.Kharts.Api.Data.Configurations
             builder.Property(p => p.DevEui).HasColumnName("dev_eui").HasColumnOrder(1).HasMaxLength(16);
             builder.Property(p => p.DeviceId).HasColumnName("device_id").HasColumnOrder(2);
 
-            builder.Property(p => p.Sdi12_1).HasColumnName("sdi12_1").HasColumnOrder(3).HasMaxLength(19);
-            builder.Property(p => p.Sdi12_2).HasColumnName("sdi12_2").HasColumnOrder(4).HasMaxLength(19);
-            builder.Property(p => p.Sdi12_3).HasColumnName("sdi12_3").HasColumnOrder(5).HasMaxLength(19);
+            builder.Property(p => p.Sdi12_1).HasColumnName("sdi12_1").HasColumnOrder(3).HasMaxLength(22);
+            builder.Property(p => p.Sdi12_2).HasColumnName("sdi12_2").HasColumnOrder(4).HasMaxLength(22);
+            builder.Property(p => p.Sdi12_3).HasColumnName("sdi12_3").HasColumnOrder(5).HasMaxLength(22);
 
             builder.Property(p => p.Battery).HasColumnName("batterie").HasColumnOrder(6);
 

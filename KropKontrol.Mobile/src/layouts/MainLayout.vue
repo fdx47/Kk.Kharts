@@ -34,6 +34,7 @@ const navItems = [
   { name: 'dashboard', to: '/', icon: 'mdi-view-dashboard', label: 'nav.dashboard' },
   { name: 'devices', to: '/devices', icon: 'mdi-access-point', label: 'nav.devices' },
   { name: 'alerts', to: '/alerts', icon: 'mdi-bell-outline', label: 'nav.alerts' },
+  { name: 'drainage', to: '/drainage', icon: 'mdi-water', label: 'nav.drainage' },
   { name: 'settings', to: '/settings', icon: 'mdi-cog-outline', label: 'nav.settings' }
 ]
 

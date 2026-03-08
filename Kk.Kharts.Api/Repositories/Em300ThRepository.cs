@@ -27,17 +27,6 @@ namespace Kk.Kharts.Api.Repositories
 
         async Task<Em300Th> IEm300ThRepository.AddEntityAndSaveAsync(Em300Th entity, string devEui)
         {
-            // Verificar se o dispositivo existe no banco
-            var device = await _context.Devices
-                .AsNoTracking() // Só para leitura
-                .FirstOrDefaultAsync(d => d.DevEui == devEui);
-
-            if (device == null)
-            {
-                throw new Exception($"Dispositivo com Id {entity.DevEui} não encontrado.");
-            }
-
-
             await _context.Em300ths.AddAsync(entity);  // Adicionar a entidade           
             await _context.SaveChangesAsync();       // Salvar as alterações
 

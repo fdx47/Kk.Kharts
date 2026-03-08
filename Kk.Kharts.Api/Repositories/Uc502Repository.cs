@@ -22,16 +22,6 @@ namespace Kk.Kharts.Api.Repositories
 
         public async Task AddEntityAndSaveAsync(Uc502Wet150 entity)
         {
-            // Verificar se o dispositivo existe no banco
-            var device = await _context.Devices
-                .AsNoTracking() // Só para leitura
-                .FirstOrDefaultAsync(d => d.DevEui == entity.DevEui);
-
-            if (device == null)
-            {
-                throw new Exception($"Aucun dispositif trouvé avec l'identifiant {entity.DevEui}.");
-            }
-
             entity.DevEui = DevEuiNormalizer.Normalize(entity.DevEui!);
             await _context.Uc502Wet150s.AddAsync(entity);  // Adicionar a entidade           
             await _context.SaveChangesAsync();       // Salvar as alterações
@@ -40,6 +30,7 @@ namespace Kk.Kharts.Api.Repositories
         public async Task<bool> DeleteWet150ByIdAsync(DateTime timestamp, string devEui)
         {
             var entity = await _context.Uc502Wet150s
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Timestamp == timestamp && x.DevEui == devEui);
 
             if (entity == null)
@@ -54,7 +45,9 @@ namespace Kk.Kharts.Api.Repositories
         public IQueryable<Uc502Wet150> GetUc502Wet150DataByDevEui(string devEui, AuthenticatedUserDto authenticatedUser)
         {
             // Caso o usuário tenha permissão, retornar os dados de Uc502Wet150 para o DevEui
-            return _context.Uc502Wet150s.Where(x => x.DevEui == devEui);
+            return _context.Uc502Wet150s
+                .AsNoTracking()
+                .Where(x => x.DevEui == devEui);
         }
 
 

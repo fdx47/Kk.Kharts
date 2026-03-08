@@ -2,6 +2,7 @@
 using Kk.Kharts.Shared.Entities.Em300;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 namespace Kk.Kharts.Api.Data.Configurations;
 
 public class Em300ThConfiguration : IEntityTypeConfiguration<Em300Th>
@@ -12,6 +13,8 @@ public class Em300ThConfiguration : IEntityTypeConfiguration<Em300Th>
 
         // Definindo a chave primária composta
         builder.HasKey(e => new { e.Timestamp, e.DevEui });
+        builder.HasIndex(e => new { e.DevEui, e.Timestamp })
+            .HasDatabaseName("IX_em300_th_dev_eui_timestamp");
 
         // Definindo as colunas e a ordem delas
         builder.Property(p => p.Timestamp).HasColumnName("timestamp").HasColumnOrder(0);

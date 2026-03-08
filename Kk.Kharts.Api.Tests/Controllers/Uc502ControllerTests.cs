@@ -75,7 +75,7 @@ public class Uc502ControllerTests
         var result = await controller.PostWet150Sdi12Data(dto);
 
         Assert.IsType<OkResult>(result);
-        uc502Service.Verify(service => service.CalculAndAddAsync(dto, device.DevEui), Times.Once);
+        uc502Service.Verify(service => service.CalculAndAddAsync(dto, It.Is<DeviceDto>(d => d.DevEui == device.DevEui)), Times.Once);
     }
 
     [Fact]
@@ -103,6 +103,6 @@ public class Uc502ControllerTests
         var result = await controller.PostWet150Sdi12Data(dto);
 
         Assert.Same(forbiddenResult, result);
-        uc502Service.Verify(service => service.CalculAndAddAsync(It.IsAny<PayloadWet150FromUg65WithApiKeyDTO>(), It.IsAny<string>()), Times.Never);
+        uc502Service.Verify(service => service.CalculAndAddAsync(It.IsAny<PayloadWet150FromUg65WithApiKeyDTO>(), It.IsAny<DeviceDto>()), Times.Never);
     }
 }

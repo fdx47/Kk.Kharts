@@ -139,11 +139,9 @@ namespace Kk.Kharts.Api.Services
         }
 
 
-        public async Task<Uc502Wet150> CalculAndAddAsync(PayloadWet150FromUg65WithApiKeyDTO payload, string devEui)
+        public async Task<Uc502Wet150> CalculAndAddAsync(PayloadWet150FromUg65WithApiKeyDTO payload, DeviceDto device)
         {
-            var device = await _deviceRepository.GetDeviceByIdApiKeyAsync(devEui);
-
-            if (payload.Battery >= 99.9f && device != null)
+            if (payload.Battery >= 99.9f)
                 payload.Battery = device.Battery;
 
             var measurementTimestamp = payload.Timestamp == default
@@ -172,7 +170,7 @@ namespace Kk.Kharts.Api.Services
 
         private static Uc502Wet150 ConstruireEntiteWet150(
             PayloadWet150FromUg65WithApiKeyDTO chargeUtile,
-            Device? appareil,
+            DeviceDto appareil,
             DateTime horodatageMesure,
             IReadOnlyList<CalculationResult> resultatsCalcul)
         {
@@ -180,7 +178,7 @@ namespace Kk.Kharts.Api.Services
             {
                 Timestamp = horodatageMesure,
                 DevEui = chargeUtile.DevEui,
-                DeviceId = appareil!.Id,
+                DeviceId = appareil.Id,
                 Permittivite = resultatsCalcul[0].Permittivite,
                 ECb = resultatsCalcul[0].ECb,
                 SoilTemperature = resultatsCalcul[0].SoilTemperature,

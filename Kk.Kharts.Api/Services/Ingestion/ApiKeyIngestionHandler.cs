@@ -64,7 +64,11 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
             }));
         }
 
-        if (DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestampUtc))
+        var attendu = ObtenirNombreChampsSdi12Attendus(device.Model);
+        var champsReçus = CompterChampsSdi12(payload);
+        var estPartiel = champsReçus > 0 && champsReçus < attendu; // payload partiel : on ne bloque pas l'agrégation
+
+        if (!estPartiel && DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestampUtc))
         {
             // Send notification to Doublons topic + record metrics
             await SendDuplicateNotificationAsync(
@@ -108,6 +112,7 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
                 🔄 <b>Donnée dupliquée détectée</b>
 
                 <b>DevEUI:</b> <code>{device.DevEui}</code>
+                <b>Id device:</b> {device.Id}
                 <b>Device:</b> {device.Name}
                 <b>Description:</b> {device.Description}
                 <b>Localisation:</b> {device.InstallationLocation}
@@ -176,9 +181,80 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         return (parts[1], parts[2], parts[3]);
     }
 
+    private static int CompterChampsSdi12(object? payload)
+    {
+        if (payload is null)
+            return 0;
+
+        var type = payload.GetType();
+
+        // 1) ExtraFieldsSdi12 (JsonExtensionData)
+        var extraFields = type.GetProperty("ExtraFieldsSdi12")?.GetValue(payload) as IDictionary<string, JsonElement>;
+
+        var count = 0;
+
+        if (extraFields is not null)
+        {
+            foreach (var kvp in extraFields)
+            {
+                if (!kvp.Key.StartsWith("sdi12_", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (kvp.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(kvp.Value.GetString()))
+                    count++;
+            }
+        }
+
+        // 2) Fallback sur les propriétés directes
+        var names = new[] { "sdi12_1", "sdi12_2", "sdi12_3", "sdi12_4", "Sdi12_1", "Sdi12_2", "Sdi12_3", "Sdi12_4", "SDI12_1", "SDI12_2", "SDI12_3", "SDI12_4" };
+
+        foreach (var name in names)
+        {
+            var prop = type.GetProperty(name);
+            if (prop is null)
+                continue;
+
+            var value = prop.GetValue(payload) as string;
+            if (!string.IsNullOrWhiteSpace(value))
+                count++;
+        }
+
+        return count;
+    }
+
+    private static int ObtenirNombreChampsSdi12Attendus(int? model)
+    {
+        return model switch
+        {
+            64 => 4,
+            63 => 3,
+            _ => 2
+        };
+    }
+
     private static string? EssayerLireSdi12(object payload)
     {
         var type = payload.GetType();
+
+        // 1) Cherche dans ExtraFieldsSdi12 (JsonExtensionData)
+        var extraFields = type.GetProperty("ExtraFieldsSdi12")?.GetValue(payload) as IDictionary<string, JsonElement>;
+        if (extraFields is not null)
+        {
+            foreach (var kvp in extraFields)
+            {
+                if (!kvp.Key.StartsWith("sdi12_", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (kvp.Value.ValueKind == JsonValueKind.String)
+                {
+                    var value = kvp.Value.GetString();
+                    if (!string.IsNullOrWhiteSpace(value))
+                        return value;
+                }
+            }
+        }
+
+        // 2) Fallback sur les propriétés directes
         var candidates = new[] { "sdi12_1", "Sdi12_1", "SDI12_1" };
 
         foreach (var name in candidates)

@@ -64,6 +64,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
+                HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
                 devEui = DevEuiNormalizer.Normalize(devEui);
                 var authenticatedUser = await _userContext.GetUserInfoFromToken();
                 var data = await _uc502Service.GetFilteredDataByDeviEuiAsync(devEui, startDate, endDate, authenticatedUser);
@@ -93,7 +94,7 @@ namespace Kk.Kharts.Api.Controllers
                 return prep.ShortCircuitResult!;
 
             entity.DevEui = prep.NormalizedDevEui!;
-            await _uc502Service.CalculAndAddAsync(entity, prep.Device!.DevEui);
+            await _uc502Service.CalculAndAddAsync(entity, prep.Device!);
             return Ok();
         }
 
@@ -104,6 +105,7 @@ namespace Kk.Kharts.Api.Controllers
         [HttpGet("api/v1/uc502/wet150/multisensor")]
         public async Task<IActionResult> GetSensorDataByDevEuiAsync([FromQuery] string devEui, DateTime startDate, [FromQuery] DateTime endDate)
         {
+            HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
             devEui = DevEuiNormalizer.Normalize(devEui);
             var authenticatedUser = await _userContext.GetUserInfoFromToken();
             var data = await _uc502Service.GetMultiSensor2ByDevEuiAsync(devEui, startDate, endDate, authenticatedUser);
@@ -260,6 +262,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
+                HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
                 devEui = DevEuiNormalizer.Normalize(devEui);
 
                 // Chama o serviço para obter os dados filtrados pelo devEui e pelo intervalo de datas
@@ -389,6 +392,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
+                HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
                 devEui = DevEuiNormalizer.Normalize(devEui);
                 // Chama o serviço para obter os dados filtrados pelo devEui e pelo intervalo de datas
                 var data = await _uc502Service.GetFilteredModbusDataByDeviceAsync(devEui, startDate, endDate);
@@ -450,6 +454,7 @@ namespace Kk.Kharts.Api.Controllers
         {
             try
             {
+                HistoricalQueryRangeGuard.ValidateOrThrow(startDate, endDate);
                 devEui = DevEuiNormalizer.Normalize(devEui);
                 var authenticatedUser = await _userContext.GetUserInfoFromToken();
 
@@ -479,6 +484,7 @@ namespace Kk.Kharts.Api.Controllers
 
             var device = await _deviceService.GetDeviceByDevEuiAsync<DeviceDto>(entity.DevEui, company)
                         ?? throw new NotFoundExceptionKk("Aucun dispositif trouvé avec le DevEui fourni.");
+
             var measurementTimestamp = entity.Timestamp == default ? DateTime.UtcNow : entity.Timestamp;
             entity.Timestamp = measurementTimestamp;
 
@@ -495,7 +501,7 @@ namespace Kk.Kharts.Api.Controllers
                 });
             }
 
-            await _uc502Service.CalculAndAddAsync(entity, device.DevEui);
+            await _uc502Service.CalculAndAddAsync(entity, device);
             return Ok();
         }
 
@@ -536,7 +542,6 @@ namespace Kk.Kharts.Api.Controllers
                 _logger.LogError(ex, "Échec de l'envoi de la notification de doublon pour {DevEui}", device.DevEui);
             }
         }
-
 
         /// <summary>
         /// Endpoint que recebe dados do dispositivo WET-150 vindos da App Kk LoraDesktop,

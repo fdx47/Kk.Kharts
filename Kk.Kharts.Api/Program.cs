@@ -58,6 +58,7 @@ namespace Kk.Kharts.Api
 
             // Serviços para o container
             builder.Services.AddHttpContextAccessor();
+            builder.Services.AddMemoryCache();
 
             builder.Services.AddDbContext<AppDbContext>((sp, opts) =>
             {
@@ -93,6 +94,7 @@ namespace Kk.Kharts.Api
             builder.Services.AddScoped<IEmailService, SmtpEmailService>();
             builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
             builder.Services.AddScoped<IWet150MulticapteurService, Wet150MulticapteurService>();
+            builder.Services.AddScoped<IDrainPluviometreService, DrainPluviometreService>();
 
             builder.Services.AddHostedService<DeviceMonitorService>();
             builder.Services.AddHostedService<DailyLogProcessorService>();

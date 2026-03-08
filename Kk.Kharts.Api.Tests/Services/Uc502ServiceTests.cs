@@ -57,16 +57,13 @@ public class Uc502ServiceTests
     {
         // Arrange
         var devEui = "24E1249999999999";
-        var device = new DeviceDto { DevEui = devEui, Battery = 85.0f };
+        var device = new DeviceDto { Id = 1, DevEui = devEui, Battery = 85.0f };
         var payload = new PayloadWet150FromUg65WithApiKeyDTO
         {
             DevEui = devEui.ToLower(),
             Battery = 95.0f,
             SDI12_1 = "0+63.123+54.0+21.00"
         };
-
-        _deviceRepository.Setup(r => r.GetDeviceByIdApiKeyAsync(devEui))
-            .ReturnsAsync(new Shared.Entities.Device { Id = 1, DevEui = devEui, Battery = 85.0f });
 
         _repository.Setup(r => r.AddEntityAndSaveAsync(It.IsAny<Uc502Wet150>()))
             .Returns(Task.CompletedTask);
@@ -75,7 +72,7 @@ public class Uc502ServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.CalculAndAddAsync(payload, devEui);
+        var result = await _service.CalculAndAddAsync(payload, device);
 
         // Assert
         Assert.NotNull(result);
@@ -88,15 +85,13 @@ public class Uc502ServiceTests
     {
         // Arrange - Battery >= 99.9 should use device battery
         var devEui = "24E1249999999999";
+        var device = new DeviceDto { Id = 1, DevEui = devEui, Battery = 85.0f };
         var payload = new PayloadWet150FromUg65WithApiKeyDTO
         {
             DevEui = devEui.ToLower(),
             Battery = 99.9f,
             SDI12_1 = "0+63.123+54.0+21.00"
         };
-
-        _deviceRepository.Setup(r => r.GetDeviceByIdApiKeyAsync(devEui))
-            .ReturnsAsync(new Shared.Entities.Device { Id = 1, DevEui = devEui, Battery = 85.0f });
 
         _repository.Setup(r => r.AddEntityAndSaveAsync(It.IsAny<Uc502Wet150>()))
             .Returns(Task.CompletedTask);
@@ -105,7 +100,7 @@ public class Uc502ServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.CalculAndAddAsync(payload, devEui);
+        var result = await _service.CalculAndAddAsync(payload, device);
 
         // Assert - payload.Battery should be replaced with device.Battery (85.0f)
         _repository.Verify(r => r.AddEntityAndSaveAsync(
@@ -120,15 +115,13 @@ public class Uc502ServiceTests
         // est testée au niveau de l’intégration avec une vraie base de données. Ici, nous vérifions seulement
         // que le service possède une structure try-catch appropriée.
         var devEui = "24E1249999999999";
+        var device = new DeviceDto { Id = 1, DevEui = devEui, Battery = 85.0f };
         var payload = new PayloadWet150FromUg65WithApiKeyDTO
         {
             DevEui = devEui.ToLower(),
             Battery = 95.0f,
             SDI12_1 = "0+63.123+54.0+21.00"
         };
-
-        _deviceRepository.Setup(r => r.GetDeviceByIdApiKeyAsync(devEui))
-            .ReturnsAsync(new Shared.Entities.Device { Id = 1, DevEui = devEui, Battery = 85.0f });
 
         var duplicateException = new DbUpdateException("Duplicate key", new FakeSqlException(2627));
 
@@ -139,7 +132,7 @@ public class Uc502ServiceTests
             .Returns(Task.CompletedTask);
 
         // Act & Assert - Should not throw
-        var result = await _service.CalculAndAddAsync(payload, devEui);
+        var result = await _service.CalculAndAddAsync(payload, device);
         // Le service retourne l'objet construit (idempotence avale les duplications)
         Assert.NotNull(result);
         _deviceRepository.Verify(r => r.UpdateDeviceStatusAsync(

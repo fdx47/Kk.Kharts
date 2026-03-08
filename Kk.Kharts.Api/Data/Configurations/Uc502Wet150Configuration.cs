@@ -12,6 +12,8 @@ namespace Kk.Kharts.Api.Data.Configurations
             builder.ToTable("wets_150");
 
             builder.HasKey(e => new { e.Timestamp, e.DevEui });
+            builder.HasIndex(e => new { e.DevEui, e.Timestamp })
+                .HasDatabaseName("IX_wets_150_dev_eui_timestamp");
 
             builder.Property(p => p.Timestamp).HasColumnName("timestamp").HasColumnOrder(0);
             builder.Property(p => p.DevEui).HasColumnName("dev_eui").HasColumnOrder(1).HasMaxLength(16);
