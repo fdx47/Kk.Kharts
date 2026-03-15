@@ -15,10 +15,10 @@ public class HfSqlOptions
 {
     public string Driver { get; set; } = "HFSQL";
     public string AnaPath { get; set; } = @"c:\\NetGlobal\\NetGlobal.wdd";
-    public string RepPath { get; set; } = @"c:\\NetGlobal\\Historique";
+    public string RepPath { get; set; } = @"c:\\NetGlobal\\Historique\\";
     public string TablePrefix { get; set; } = "AMOY";
     public string TableSuffixFormat { get; set; } = "yyyyMMdd";
-    public string TableNameLogical { get; set; } = "AMOYdatadodia";
+    public string TableNameLogical { get; set; } = string.Empty;
     public int CommandTimeoutSeconds { get; set; } = 15;
 }
 
@@ -40,6 +40,7 @@ public class ApiOptions
 public class FilterOptions
 {
     public int NumElt { get; set; } = 0;
+    public List<int> NumEltList { get; set; } = new();
 }
 
 public class StateOptions

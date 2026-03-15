@@ -1,7 +1,5 @@
-using System.Net.Http.Json;
 using HfSqlForwarder.Models;
 using HfSqlForwarder.Settings;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace HfSqlForwarder.Services;

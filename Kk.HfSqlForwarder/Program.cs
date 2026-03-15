@@ -25,6 +25,7 @@ var app = builder.Build();
 app.Services.GetRequiredService<RuntimeSettingsService>()
     .Initialize(app.Services.GetRequiredService<IOptionsMonitor<ForwarderOptions>>());
 
+app.UseStaticFiles();
 app.MapDashboardEndpoints();
 
 await app.RunAsync();

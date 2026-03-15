@@ -1,8 +1,6 @@
 using HfSqlForwarder.Settings;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using System.Threading;
 
 namespace HfSqlForwarder.Services;
 

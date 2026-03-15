@@ -1,4 +1,6 @@
 using HfSqlForwarder.Settings;
+using System.Text.Json;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace HfSqlForwarder.Services;
@@ -7,15 +9,17 @@ public class RuntimeSettingsService
 {
     private ForwarderOptions _current;
     private readonly object _gate = new();
+    private readonly string _runtimePath;
 
-    public RuntimeSettingsService()
+    public RuntimeSettingsService(IHostEnvironment env)
     {
         _current = new ForwarderOptions();
+        _runtimePath = Path.Combine(env.ContentRootPath, "runtime-settings.json");
     }
 
     public void Initialize(IOptionsMonitor<ForwarderOptions> monitor)
     {
-        _current = Clone(monitor.CurrentValue);
+        _current = LoadRuntimeOverride() ?? Clone(monitor.CurrentValue);
         monitor.OnChange(opts =>
         {
             lock (_gate)
@@ -33,6 +37,7 @@ public class RuntimeSettingsService
         lock (_gate)
         {
             _current = Clone(newOptions);
+            PersistToFile(_current);
         }
     }
 
@@ -80,5 +85,36 @@ public class RuntimeSettingsService
                 FileNamePattern = source.Logging.FileNamePattern
             }
         };
+    }
+
+    private void PersistToFile(ForwarderOptions opts)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(opts, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_runtimePath, json);
+        }
+        catch
+        {
+            // On ne bloque pas l'exécution si l'écriture échoue (permissions, etc.)
+        }
+    }
+
+    private ForwarderOptions? LoadRuntimeOverride()
+    {
+        try
+        {
+            if (File.Exists(_runtimePath))
+            {
+                var json = File.ReadAllText(_runtimePath);
+                var opts = JsonSerializer.Deserialize<ForwarderOptions>(json);
+                if (opts != null) return opts;
+            }
+        }
+        catch
+        {
+            // Ignore erreurs de lecture/désérialisation
+        }
+        return null;
     }
 }

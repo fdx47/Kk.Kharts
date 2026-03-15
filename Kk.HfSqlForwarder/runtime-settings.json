@@ -20,7 +20,8 @@
     "TimeoutSeconds": 30
   },
   "Filtre": {
-    "NumElt": 10
+    "NumElt": 110,
+    "NumEltList": []
   },
   "State": {
     "StatePath": "C:/ProgramData/HfSqlForwarder/forwarder_state.json"
