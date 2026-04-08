@@ -1,9 +1,6 @@
 using HfSqlForwarder.Models;
-using HfSqlForwarder.Services;
 using HfSqlForwarder.Settings;
 using HfSqlForwarder.State;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace HfSqlForwarder.Services;

@@ -6,14 +6,18 @@ namespace Kk.Kharts.Shared.Enums
     public enum NotificationChannelPreference
     {
         Aucun = 0,       // Nenhum canal
-        Telegram = 1,    // 001
-        Pushover = 2,    // 010
-        Email = 4,       // 100
+        Telegram = 1,    // 0001
+        Pushover = 2,    // 0010
+        Email = 4,       // 0100
+        OneSignal = 8,   // 1000
 
-        TelegramEtPushover = Telegram | Pushover, // DB = 3 -  001 | 010
-        TelegramEtEmail = Telegram | Email,       // DB = 5 -  001 | 100
-        PushoverEtEmail = Pushover | Email,       // DB = 6 -  010 | 100
-        Tous = Telegram | Pushover | Email        // DB = 7 -  001 | 010 | 100
+        TelegramEtPushover = Telegram | Pushover, // 0011
+        TelegramEtEmail = Telegram | Email,       // 0101
+        PushoverEtEmail = Pushover | Email,       // 0110
+        TelegramEtOneSignal = Telegram | OneSignal, // 1001
+        PushoverEtOneSignal = Pushover | OneSignal, // 1010
+        EmailEtOneSignal = Email | OneSignal,       // 1100
+        Tous = Telegram | Pushover | Email | OneSignal // 1111
     }
 }
 

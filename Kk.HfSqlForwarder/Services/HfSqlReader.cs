@@ -1,5 +1,4 @@
 using HfSqlForwarder.Models;
-using HfSqlForwarder.Settings;
 using System.Data.Odbc;
 
 namespace HfSqlForwarder.Services;
@@ -57,9 +56,11 @@ public class HfSqlReader
         // Connexion directe HFSQL en mode free table (MODE=FREE)
         var cs = $"Driver={{HFSQL}};MODE=FREE;REP=c:\\NetGlobal\\Historique;Pooling=False;";
         _logger.LogInformation("[HFSQL] Connexion (MODE=FREE) : {Cs}", cs);
+
         using var conn = new OdbcConnection(cs);
         conn.Open();
         _logger.LogInformation("[HFSQL] Connexion OK");
+
         try
         {
             TryReadWithConnection(conn, tableName, jour, list, skipOpenFile: true);
@@ -111,9 +112,12 @@ public class HfSqlReader
 
                 while (reader.Read())
                 {
-                    if (reader.IsDBNull(0)) continue;
+                    if (reader.IsDBNull(0))
+                        continue;
+
                     var numElt = reader.GetInt32(0);
-                    if (filters.Count > 0 && !filters.Contains(numElt)) continue;
+                    if (filters.Count > 0 && !filters.Contains(numElt))
+                        continue;
 
                     var start = GetIntSafe(reader, 43);   // Data38
                     var end = GetIntSafe(reader, 6);      // Data1

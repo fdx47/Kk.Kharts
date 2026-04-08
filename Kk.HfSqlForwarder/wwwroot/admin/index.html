@@ -1,307 +1,441 @@
 <!DOCTYPE html>
 <html lang="fr" x-data="dashboard()" x-init="init()">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HfSqlForwarder - Administration</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <style>
-    [x-cloak] { display: none !important; }
-    .gradient-bg { background: radial-gradient(circle at 20% 20%, rgba(59,130,246,0.15), transparent 25%), radial-gradient(circle at 80% 0%, rgba(167,139,250,0.12), transparent 25%), #0b1221; }
-    .card { background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.15); box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
-    .glass { backdrop-filter: blur(12px); }
-    .code { font-family: "Cascadia Code", "Fira Code", monospace; }
-    .pill { border-radius: 9999px; }
-  </style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HfSqlForwarder - Administration</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="/admin/css/dashboard.css" />
+    <style>
+        /* Custom improvements */
+        .card-header {
+            background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(147,51,234,0.1) 100%);
+            border-radius: 0.75rem 0.75rem 0 0.75rem;
+        }
+        
+        .metric-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            backdrop-filter: blur(16px);
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3);
+        }
+        
+        .status-badge {
+            font-weight: 600;
+            letter-spacing: 0.025em;
+        }
+        
+        .status-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .status-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        
+        .status-error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .log-entry {
+            transition: all 0.2s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .tab-active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+        
+        .icon-large {
+            font-size: 2.5rem;
+            width: 4rem;
+            height: 4rem;
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
 </head>
 <body class="gradient-bg min-h-screen text-slate-100">
-  <div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
-
-    <!-- Header -->
-    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-      <div class="flex items-center gap-4">
-        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-400 to-purple-500 flex items-center justify-center text-2xl font-bold shadow-lg">HF</div>
-        <div>
-          <h1 class="text-2xl font-semibold">HfSqlForwarder</h1>
-          <p class="text-sm text-slate-400">Transfert HFSQL vers GrowFlex · Console d'administration</p>
-          <div class="mt-1 text-xs text-slate-400 flex items-center gap-2">
-            <span class="pill px-2 py-0.5 bg-white/10 border border-white/10">Mode Free Table</span>
-            <span class="pill px-2 py-0.5 bg-white/5 border border-white/10">X-Admin-Secret</span>
-          </div>
-        </div>
-      </div>
-      <div class="flex gap-3">
-        <button @click="refreshAll" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 transition flex items-center gap-2">
-          <i class="fas fa-rotate"></i><span>Rafraîchir</span>
-        </button>
-        <button @click="logout" class="px-4 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-200 transition flex items-center gap-2">
-          <i class="fas fa-sign-out-alt"></i><span>Déconnexion</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- Auth -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-show="!authenticated">
-      <div class="card glass rounded-2xl p-6 lg:col-span-2">
-        <h2 class="text-lg font-semibold mb-4">Authentification</h2>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="text-sm text-slate-400">Secret administrateur</label>
-            <input x-model="loginForm.secret" type="password" class="mt-2 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="X-Admin-Secret" />
-          </div>
-          <div class="flex items-end gap-3">
-            <button @click="login" class="px-4 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold w-full">Se connecter</button>
-          </div>
-        </div>
-        <p class="text-xs text-slate-400 mt-3">Le secret est envoyé dans le header <code class="code bg-white/5 px-2 py-1 rounded">X-Admin-Secret</code>.</p>
-        <div x-show="loginError" class="mt-4 p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm" x-text="loginError"></div>
-      </div>
-      <div class="card glass rounded-2xl p-6 space-y-3">
-        <h3 class="text-sm text-slate-400">Raccourcis</h3>
-        <button @click="prefill('25102017')" class="w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition">Remplir secret (démo)</button>
-        <p class="text-xs text-slate-500">Vous pouvez personnaliser cette valeur dans appsettings ou via votre système de secrets.</p>
-      </div>
-    </section>
-
-    <!-- Main dashboard -->
-    <div x-show="authenticated" x-cloak class="space-y-6">
-
-      <!-- Status cards -->
-      <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="card glass rounded-2xl p-5 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-sm text-slate-400">
-            <span>Connexion HFSQL</span>
-            <span :class="state.hfsqlHealthy ? 'text-green-400' : 'text-red-400'" class="pill px-2 py-0.5 bg-white/5 border border-white/10" x-text="state.hfsqlHealthy ? 'OK' : 'Erreur'"></span>
-          </div>
-          <div class="text-xl font-semibold" x-text="state.lastHealth"></div>
-          <p class="text-xs text-slate-500">Dernier check: <span x-text="formatDate(state.lastHealthTime)"></span></p>
-        </div>
-        <div class="card glass rounded-2xl p-5 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-sm text-slate-400">
-            <span>Cycle Forwarder</span>
-            <span class="pill px-2 py-0.5 bg-white/5 border border-white/10" x-text="state.lastCycleStatus || 'N/A'"></span>
-          </div>
-          <div class="text-xl font-semibold" x-text="state.lastCycle"></div>
-          <p class="text-xs text-slate-500">Erreur: <span x-text="state.lastError || '-' "></span></p>
-        </div>
-        <div class="card glass rounded-2xl p-5 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-sm text-slate-400">
-            <span>Config NumElt</span>
-            <span class="pill px-2 py-0.5 bg-white/5 border border-white/10" x-text="config.numelt ?? '-' "></span>
-          </div>
-          <div class="text-xl font-semibold" x-text="config.intervalMinutes ? config.intervalMinutes + ' min' : '-' "></div>
-          <p class="text-xs text-slate-500">Intervalle actuel</p>
-        </div>
-        <div class="card glass rounded-2xl p-5 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-sm text-slate-400">
-            <span>Logs récents</span>
-            <span class="pill px-2 py-0.5 bg-white/5 border border-white/10" x-text="logs.length"></span>
-          </div>
-          <div class="text-xl font-semibold">Suivi en temps réel</div>
-          <p class="text-xs text-slate-500">Cliquer sur « Logs » pour tout voir</p>
-        </div>
-      </section>
-
-      <!-- Two column: health + config -->
-      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div class="card glass rounded-2xl p-6 xl:col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-lg font-semibold">État du service</h2>
-              <p class="text-sm text-slate-400">Ping, état HFSQL, dernier cycle</p>
+    <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <!-- Header -->
+        <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="icon-large rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-400 to-purple-500 flex items-center justify-center text-white font-bold shadow-2xl pulse">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">HfSqlForwarder</h1>
+                    <p class="text-slate-400">Transfert HFSQL vers GrowFlex · Console d'administration</p>
+                    <div class="mt-2 flex items-center gap-3">
+                        <span class="status-badge px-3 py-1 bg-white/10 border border-white/20 rounded-full text-xs">Mode Free Table</span>
+                        <span class="status-badge px-3 py-1 bg-white/10 border border-white/20 rounded-full text-xs">X-Admin-Secret</span>
+                    </div>
+                </div>
             </div>
-            <div class="flex gap-2">
-              <button @click="loadHealth" class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">Vérifier santé</button>
-              <button @click="loadState" class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">État complet</button>
+            <div class="flex gap-3">
+                <button @click="refreshAll" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Rafraîchir</span>
+                </button>
+                <button @click="logout" class="px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-200 transition-all flex items-center gap-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Déconnexion</span>
+                </button>
             </div>
-          </div>
-          <pre class="code bg-black/50 border border-white/5 rounded-xl p-4 text-sm text-slate-200 overflow-auto max-h-72" x-text="json(stateDump)"></pre>
-        </div>
+        </header>
 
-        <div class="card glass rounded-2xl p-6 space-y-4">
-          <h2 class="text-lg font-semibold">Configuration</h2>
-          <label class="text-sm text-slate-400">NumElt (filtre)</label>
-          <input x-model.number="config.numelt" type="number" class="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="0" />
-
-          <label class="text-sm text-slate-400">NumElt (liste, séparés par virgule)</label>
-          <input x-model="config.numeltCsv" type="text" class="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="10,11,12" />
-          <label class="text-sm text-slate-400">Intervalle (minutes)</label>
-          <input x-model.number="config.intervalMinutes" type="number" class="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="3" />
-          <div class="flex gap-2 pt-2">
-            <button @click="saveConfig" class="flex-1 px-3 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold">Sauvegarder</button>
-            <button @click="loadConfig" class="flex-1 px-3 py-3 rounded-lg bg-white/5 border border-white/10">Recharger</button>
-          </div>
-          <div x-show="configStatus" class="text-sm" :class="configStatus==='ok' ? 'text-green-300' : 'text-red-300'" x-text="configStatus==='ok' ? 'Configuration enregistrée' : 'Erreur config'"></div>
-        </div>
-      </section>
-
-      <!-- Rega Table -->
-      <section class="card glass rounded-2xl p-6">
-        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div>
-            <h2 class="text-lg font-semibold">Lecture HFSQL (AMOY / Rega)</h2>
-            <p class="text-sm text-slate-400">Affiche les enregistrements lus via /admin/rega</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <input type="date" x-model="regaDay" class="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" />
-            <button @click="loadRega" class="px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold flex items-center gap-2">
-              <i class="fas fa-database"></i><span>Charger</span>
-            </button>
-          </div>
-        </div>
-        <div x-show="regaError" class="mb-3 p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm" x-text="regaError"></div>
-        <div class="flex items-center gap-3 text-sm text-slate-400 mb-3">
-          <span class="pill px-2 py-0.5 bg-white/5 border border-white/10">Jour: <span x-text="regaDay"></span></span>
-          <span class="pill px-2 py-0.5 bg-white/5 border border-white/10">Total: <span x-text="regaCount"></span></span>
-          <span x-show="regaLoading" class="text-cyan-300 flex items-center gap-1"><i class="fas fa-spinner fa-spin"></i>Chargement...</span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead class="text-slate-300">
-              <tr class="border-b border-white/10">
-                <th class="py-2 px-3 text-left">NumElt</th>
-                <th class="py-2 px-3 text-left">Cycle</th>
-                <th class="py-2 px-3 text-left">Start</th>
-                <th class="py-2 px-3 text-left">End</th>
-                <th class="py-2 px-3 text-left">Volume</th>
-                <th class="py-2 px-3 text-left">Jour</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="item in regaItems" :key="item.cycleNumber + '-' + item.startMinutes">
-                <tr class="border-b border-white/5 hover:bg-white/5">
-                    <td class="py-2 px-3" x-text="item.numElt"></td>
-                    <td class="py-2 px-3" x-text="item.cycleNumber"></td>
-                    <td class="py-2 px-3" x-text="formatMinutes(item.startMinutes)"></td>
-                    <td class="py-2 px-3" x-text="formatMinutes(item.endMinutes)"></td>
-                    <td class="py-2 px-3" x-text="item.waterVolume"></td>
-                    <td class="py-2 px-3" x-text="item.jour"></td>
-                </tr>
-              </template>
-              <tr x-show="regaItems.length===0">
-                <td colspan="6" class="py-4 text-center text-slate-500">Aucune donnée</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Logs -->
-      <section class="card glass rounded-2xl p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">Journal</h2>
-          <div class="flex gap-2">
-            <button @click="refreshLogs" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Actualiser</button>
-            <button @click="clearLogsView" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Vider affichage</button>
-          </div>
-        </div>
-        <div class="space-y-2 max-h-[500px] overflow-y-auto">
-          <template x-for="log in logs" :key="log.timestamp + log.message">
-            <div class="flex items-start gap-3 text-sm border-b border-white/5 pb-2">
-              <span class="text-slate-500 w-24 shrink-0" x-text="formatDateTime(log.timestamp)"></span>
-              <span class="pill px-2 py-0.5 text-xs font-semibold" :class="levelClass(log.level)" x-text="log.level"></span>
-              <span class="text-slate-200" x-text="log.message"></span>
+        <!-- Auth -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-show="!authenticated">
+            <div class="metric-card rounded-2xl p-8 lg:col-span-2">
+                <div class="card-header rounded-t-xl p-4">
+                    <h2 class="text-xl font-semibold text-white">🔐 Authentification</h2>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="text-sm text-slate-300 block mb-2">Secret administrateur</label>
+                        <input x-model="loginForm.secret" type="password" class="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white placeholder-slate-400" placeholder="X-Admin-Secret" />
+                    </div>
+                    <div class="flex items-end gap-3">
+                        <button @click="login" class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold transition-all">
+                            <i class="fas fa-sign-in-alt mr-2"></i>
+                            Se connecter
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-3">Le secret est envoyé dans le header <code class="bg-white/10 px-2 py-1 rounded text-cyan-300">X-Admin-Secret</code>.</p>
+                    <div x-show="loginError" class="mt-4 p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <span x-text="loginError"></span>
+                    </div>
+                </div>
             </div>
-          </template>
-          <div x-show="logs.length===0" class="text-slate-500 text-sm">Aucun log</div>
-        </div>
-      </section>
+            <div class="metric-card rounded-2xl p-8 space-y-4">
+                <div class="card-header rounded-t-xl p-4">
+                    <h3 class="text-lg font-semibold text-white">🚀 Raccourcis</h3>
+                </div>
+                <button @click="prefill('25102017')" class="w-full px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all text-left">
+                    <i class="fas fa-key mr-2"></i>
+                    <span>Remplir secret (démo)</span>
+                </button>
+                <p class="text-xs text-slate-400 mt-3">Vous pouvez personnaliser cette valeur dans appsettings ou via votre système de secrets.</p>
+            </div>
+        </section>
 
+        <!-- Status HFSQL (visible avant connexion) -->
+        <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" x-show="!authenticated">
+            <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                <div class="flex items-center justify-between text-sm text-slate-300">
+                    <span class="flex items-center gap-2">
+                        <i class="fas fa-database text-blue-400"></i>
+                        <span>Connexion HFSQL</span>
+                    </span>
+                    <span class="status-badge px-3 py-1 bg-amber-500/20 text-amber-200 border border-amber-500/30">Non authentifié</span>
+                </div>
+                <div class="text-2xl font-semibold">-</div>
+                <p class="text-xs text-slate-400">Connectez-vous pour vérifier le statut</p>
+            </div>
+        </section>
+
+        <!-- Main dashboard -->
+        <div x-show="authenticated" x-cloak class="space-y-6">
+            <!-- Status cards -->
+            <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-database text-green-400"></i>
+                            <span>Connexion HFSQL</span>
+                        </span>
+                        <span :class="state.hfsqlHealthy ? 'status-success' : 'status-error'" class="status-badge px-3 py-1" x-text="state.hfsqlHealthy ? 'OK' : 'Erreur'"></span>
+                    </div>
+                    <div class="text-2xl font-bold" x-text="state.lastHealthTime ? 'Connecté' : 'Vérification...'"></div>
+                    <p class="text-xs text-slate-400">Dernier check: <span x-text="formatDate(state.lastHealthTime)"></span></p>
+                </div>
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-sync text-cyan-400"></i>
+                            <span>Transfert de Données</span>
+                        </span>
+                        <span class="status-badge px-3 py-1" x-text="state.lastCycleStatus || 'N/A'"></span>
+                    </div>
+                    <div class="text-2xl font-bold" x-text="state.lastCycle === 0 ? 'Aucun cycle' : `Cycle ${state.lastCycle}`"></div>
+                    <p class="text-xs text-slate-400">Erreur: <span x-text="state.lastError || '-' "></span></p>
+                </div>
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-filter text-purple-400"></i>
+                            <span>Filtre Éléments</span>
+                        </span>
+                        <span class="status-badge px-3 py-1" x-text="config.numelt ? `N°${config.numelt}` : 'Non configuré'"></span>
+                    </div>
+                    <div class="text-2xl font-bold" x-text="config.intervalMinutes ? `Toutes les ${config.intervalMinutes} min` : '-' "></div>
+                    <p class="text-xs text-slate-400">Vérification automatique des données</p>
+                </div>
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-list text-amber-400"></i>
+                            <span>Journal d'Activité</span>
+                        </span>
+                        <span class="status-badge px-3 py-1" x-text="logs.length"></span>
+                    </div>
+                    <div class="text-2xl font-bold">Suivi en temps réel</div>
+                    <p class="text-xs text-slate-400">Cliquez sur « Logs » pour tout voir</p>
+                </div>
+            </section>
+
+            <!-- System Information Cards -->
+            <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-database text-blue-400"></i>
+                            <span>Base HFSQL</span>
+                        </span>
+                        <span class="status-badge px-3 py-1 bg-blue-500/20 text-blue-200 border border-blue-500/30">Active</span>
+                    </div>
+                    <div class="text-2xl font-bold">AMOY20260402</div>
+                    <p class="text-xs text-slate-400">Table du jour</p>
+                </div>
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-chart-line text-green-400"></i>
+                            <span>Enregistrements</span>
+                        </span>
+                        <span class="status-badge px-3 py-1" x-text="records.today"></span>
+                    </div>
+                    <div class="text-2xl font-bold">Aujourd'hui</div>
+                    <p class="text-xs text-slate-400">Dernière lecture: <span x-text="formatDate(records.lastRead)">-</span></span></p>
+                </div>
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-cloud-upload-alt text-green-400"></i>
+                            <span>API GrowFlex</span>
+                        </span>
+                        <span class="status-badge px-3 py-1 bg-green-500/20 text-green-200 border border-green-500/30">OK</span>
+                    </div>
+                    <div class="text-2xl font-bold">Connectée</div>
+                    <p class="text-xs text-slate-400">Endpoint: /api/v1/growflex/hfsql</p>
+                </div>
+                <div class="metric-card rounded-2xl p-6 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-sm text-slate-300">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-clock text-amber-400"></i>
+                            <span>Service Uptime</span>
+                        </span>
+                        <span class="status-badge px-3 py-1 bg-amber-500/20 text-amber-200 border border-amber-500/30">Running</span>
+                    </div>
+                    <div class="text-2xl font-bold" x-text="uptime"></div>
+                    <p class="text-xs text-slate-400">Depuis démarrage</p>
+                </div>
+            </section>
+
+            <!-- Database Information -->
+            <section class="metric-card rounded-2xl p-6">
+                <div class="card-header rounded-t-xl p-4 mb-4">
+                    <h2 class="text-xl font-semibold text-white">🗄️ Informations Base HFSQL</h2>
+                    <p class="text-slate-400">Détails de connexion et tables disponibles</p>
+                </div>
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex gap-2">
+                        <button @click="testDatabase" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">Tester connexion</button>
+                        <button @click="testDatabaseWithIcon" class="px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-sm text-blue-200 flex items-center justify-center gap-2">
+                            <i class="fas fa-database" x-show="!testDatabaseStatus"></i>
+                            <i class="fas fa-spinner fa-spin" x-show="testDatabaseStatus === 'testing'"></i>
+                            <i class="fas fa-check" x-show="testDatabaseStatus === 'success'"></i>
+                            <i class="fas fa-times" x-show="testDatabaseStatus === 'error'"></i>
+                            <span>Tester la base</span>
+                        </button>
+                        <button @click="refreshDatabase" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">Rafraîchir</button>
+                    </div>
+                </div>
+                
+                <!-- Database Result Feedback -->
+                <div x-show="databaseResult" x-transition class="mb-4">
+                    <div class="p-4 rounded-lg border" :class="databaseResult.status === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-200' : 'bg-red-500/10 border-red-500/30 text-red-200'">
+                        <div class="flex items-center gap-2">
+                            <i class="fas" :class="databaseResult.status === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+                            <span x-text="databaseResult.message"></span>
+                        </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-slate-300 mb-2">Driver HFSQL</h3>
+                        <p class="text-xs text-slate-400">Version: Mode Free Table</p>
+                        <p class="text-xs text-slate-400">Path: [Path masqué]</p>
+                        <p class="text-xs text-slate-400">Status: <span class="text-green-400">Connecté</span></p>
+                    </div>
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-slate-300 mb-2">Table Actuelle</h3>
+                        <p class="text-xs text-slate-400">Nom: AMOY20260402</p>
+                        <p class="text-xs text-slate-400">Fichier: AMOY20260402.FIC ✓</p>
+                        <p class="text-xs text-slate-400">Index: AMOY20260402.NDX ✓</p>
+                    </div>
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-slate-300 mb-2">Performance</h3>
+                        <p class="text-xs text-slate-400">Lignes lues: <span x-text="records.today">0</span></p>
+                        <p class="text-xs text-slate-400">Temps lecture: &lt;100ms</p>
+                        <p class="text-xs text-slate-400">Cache: Activé</p>
+                        <div class="mt-2 pt-2 border-t border-white/10">
+                            <button @click="showValues = !showValues" class="w-full px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-slate-300 transition">
+                                <span x-show="!showValues">Voir les valeurs</span>
+                                <span x-show="showValues">Masquer les valeurs</span>
+                            </button>
+                        </div>
+                        <div x-show="showValues" x-transition class="mt-2 pt-2 border-t border-white/10">
+                            <p class="text-xs text-slate-400">Dernière lecture: <span x-text="formatDate(records.lastRead)">-</span></span></p>
+                            <p class="text-xs text-slate-400">Table: <span x-text="records.table">-</span></span></p>
+                        </div>
+                        <div x-show="showValues" x-transition class="mt-3">
+                            <button @click="loadData" class="w-full px-2 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-xs text-blue-200 transition mb-2 flex items-center justify-center gap-1">
+                                <i class="fas fa-database"></i>
+                                <span x-show="loadDataStatus === 'pending'">Chargement...</span>
+                                <span x-show="loadDataStatus === 'success'">Charger les valeurs</span>
+                                <span x-show="loadDataStatus === 'error'">Réessayer</span>
+                            </button>
+                            <div x-show="loadDataStatus === 'error'" class="text-xs text-red-400 text-center py-1">
+                                <span x-text="loadDataError"></span>
+                            </div>
+                            <div x-show="tableData.count > 0" class="bg-black/50 border border-white/10 rounded p-3 max-h-60 overflow-y-auto">
+                                <p class="text-xs text-slate-400 mb-2">Table: <span x-text="tableData.table"></span> (<span x-text="tableData.count"></span> lignes)</p>
+                                <template x-for="(item, index) in tableData.data" :key="index">
+                                    <div class="text-xs text-slate-300 border-b border-white/10 pb-1">
+                                        <span class="text-blue-300">N°{{item.NumElt}}</span>
+                                        <span class="text-green-300">Cycle: {{item.CycleNumber}}</span>
+                                        <span class="text-amber-300">Volume: {{item.WaterVolume}}</span>
+                                        <span class="text-cyan-300">Début: {{formatMinutes(item.StartMinutes)}}</span>
+                                        <span class="text-purple-300">Fin: {{formatMinutes(item.EndMinutes)}}</span>
+                                    </div>
+                                </template>
+                                <p x-show="tableData.hasMore" class="text-xs text-slate-500 mt-2">... et {{tableData.count - 10}} autres lignes</p>
+                            </div>
+                            <div x-show="tableData.count === 0 && loadDataStatus === 'success'" class="text-xs text-slate-500 text-center py-2">
+                                ✅ Table lue avec succès - aucune donnée trouvée
+                            </div>
+                            <div x-show="tableData.count === 0 && loadDataStatus === 'pending'" class="text-xs text-slate-400 text-center py-2">
+                                ⏳ En cours de chargement...
+                            </div>
+                            <div x-show="tableData.count === 0 && loadDataStatus === 'error'" class="text-xs text-red-400 text-center py-2">
+                                ❌ Erreur: <span x-text="loadDataError"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Two column: health + config -->
+            <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="metric-card rounded-2xl p-6 xl:col-span-2">
+                    <div class="card-header rounded-t-xl p-4 mb-4">
+                        <h2 class="text-xl font-semibold text-white">🔍 État du service</h2>
+                        <p class="text-slate-400">Ping, état HFSQL, dernier cycle</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="loadHealth" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">Vérifier santé</button>
+                        <button @click="loadState" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">État complet</button>
+                    </div>
+                    <pre class="code bg-black/50 border border-white/5 rounded-xl p-4 text-sm text-slate-200 overflow-auto max-h-72" x-text="json(stateDump)"></pre>
+                </div>
+
+                <div class="metric-card rounded-2xl p-6 space-y-4">
+                    <div class="card-header rounded-t-xl p-4 mb-4">
+                        <h2 class="text-xl font-semibold text-white">⚙️ Configuration</h2>
+                    </div>
+                    <label class="text-sm text-slate-300 block mb-2">NumElt (filtre)</label>
+                    <input x-model.number="config.numelt" type="number" class="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white placeholder-slate-400" placeholder="0" />
+                    <label class="text-sm text-slate-300 block mb-2">Intervalle (minutes)</label>
+                    <input x-model.number="config.intervalMinutes" type="number" class="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white placeholder-slate-400" placeholder="3" />
+                    <div class="flex gap-2 pt-2">
+                        <button @click="saveConfig" class="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold transition-all">Sauvegarder</button>
+                        <button @click="loadConfig" class="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10">Recharger</button>
+                    </div>
+                    <div x-show="configStatus" class="text-sm" :class="configStatus==='ok' ? 'text-green-300' : 'text-red-300'" x-text="configStatus==='ok' ? 'Configuration enregistrée' : 'Erreur config'"></div>
+                </div>
+            </section>
+
+            <!-- Logs -->
+            <section class="metric-card rounded-2xl p-6" x-show="showLogs" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-95">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-white">📋 Journal d'Activité</h2>
+                    <div class="flex gap-2">
+                        <button @click="refreshLogs" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm">Actualiser</button>
+                        <button @click="clearLogsView" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm">Vider affichage</button>
+                        <button @click="loadSystemLogs" class="px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-sm text-blue-200">Logs système</button>
+                    </div>
+                </div>
+                
+                <!-- Tabs para logs -->
+                <div class="mb-4">
+                    <div class="flex gap-2 border-b border-white/10">
+                        <button @click="activeLogTab = 'app'" :class="activeLogTab === 'app' ? 'text-blue-300 border-b-2 border-blue-300' : 'text-slate-400'" class="px-4 py-2 text-sm font-medium transition">Application</button>
+                        <button @click="activeLogTab = 'system'" :class="activeLogTab === 'system' ? 'text-blue-300 border-b-2 border-blue-300' : 'text-slate-400'" class="px-4 py-2 text-sm font-medium transition">Système</button>
+                    </div>
+                </div>
+                
+                <!-- Logs da Aplicação -->
+                <div x-show="activeLogTab === 'app'" class="space-y-2 max-h-[500px] overflow-y-auto">
+                    <template x-for="log in logs" :key="log.timestamp + log.message">
+                        <div class="log-entry">
+                            <span class="text-slate-500 w-24 shrink-0" x-text="formatDateTime(log.timestamp)"></span>
+                            <span class="pill px-2 py-0.5 text-xs font-semibold" :class="levelClass(log.level)" x-text="log.level"></span>
+                            <span class="text-slate-200" x-text="log.message"></span>
+                        </div>
+                    </template>
+                    <div x-show="logs.length===0" class="text-slate-500 text-sm text-center py-8">Aucun log</div>
+                </div>
+                
+                <!-- Logs do Sistema -->
+                <div x-show="activeLogTab === 'system'" class="space-y-2 max-h-[500px] overflow-y-auto">
+                    <div x-show="systemLogsStatus === 'pending'" class="text-slate-500 text-sm text-center py-8">
+                        ⏳ Chargement des logs système...
+                    </div>
+                    <div x-show="systemLogsStatus === 'error'" class="text-red-400 text-sm text-center py-8">
+                        ❌ Erreur: <span x-text="systemLogsError"></span>
+                    </div>
+                    <template x-for="log in systemLogs" :key="log.timestamp + log.message">
+                        <div class="log-entry">
+                            <span class="text-slate-500 w-24 shrink-0" x-text="formatDateTime(log.timestamp)"></span>
+                            <span class="pill px-2 py-0.5 text-xs font-semibold" :class="levelClass(log.level)" x-text="log.level"></span>
+                            <span class="text-slate-200" x-text="log.message"></span>
+                        </div>
+                    </template>
+                    <div x-show="systemLogs.length===0 && systemLogsStatus === 'success'" class="text-slate-500 text-sm text-center py-8">Aucun log système trouvé</div>
+                </div>
+            </section>
+
+        </div>
     </div>
-  </div>
 
-  <script>
-    function dashboard() {
-      return {
-        authenticated: false,
-        loginForm: { secret: '' },
-        loginError: '',
-        state: { hfsqlHealthy: false, lastCycle: '-', lastCycleStatus: '', lastError: '', lastHealth: '-', lastHealthTime: null },
-        stateDump: {},
-        config: { numelt: null, intervalMinutes: null },
-        configStatus: null,
-        logs: [],
-        init() {
-          const saved = localStorage.getItem('hf-admin-secret');
-          if (saved) { this.loginForm.secret = saved; this.authenticated = true; this.refreshAll(); }
-        },
-        prefill(val) { this.loginForm.secret = val; },
-        logout() { this.authenticated = false; localStorage.removeItem('hf-admin-secret'); this.loginForm.secret = ''; },
-        async login() {
-          if (!this.loginForm.secret) { this.loginError = 'Secret requis'; return; }
-          localStorage.setItem('hf-admin-secret', this.loginForm.secret);
-          this.loginError = ''; this.authenticated = true; await this.refreshAll();
-        },
-        headers() { return { 'X-Admin-Secret': this.loginForm.secret || localStorage.getItem('hf-admin-secret') || '', 'Content-Type': 'application/json' }; },
-        async call(path, method='GET', body=null) {
-          const res = await fetch(path, { method, headers: this.headers(), body: body ? JSON.stringify(body) : null });
-          const text = await res.text();
-          let data = text; try { data = JSON.parse(text); } catch {}
-          return { ok: res.ok, data };
-        },
-        async loadConfig() {
-          const r = await this.call('/admin/config');
-          if (r.ok) {
-            this.config.numelt = r.data?.NumElt ?? null;
-            this.config.intervalMinutes = r.data?.IntervalMinutes ?? null;
-            const lst = r.data?.NumEltList ?? [];
-            this.config.numeltCsv = Array.isArray(lst) && lst.length > 0 ? lst.join(',') : '';
-            this.configStatus = null;
-          }
-        },
-        async saveConfig() {
-          const list = (this.config.numeltCsv || '')
-            .split(',')
-            .map(s => s.trim())
-            .filter(s => s !== '')
-            .map(s => parseInt(s))
-            .filter(n => !Number.isNaN(n));
-
-          const payload = { NumElt: this.config.numelt ?? 0, IntervalMinutes: this.config.intervalMinutes ?? 3 };
-          if (list.length > 0) payload.NumEltList = list;
-          const r = await this.call('/admin/config','POST', payload);
-          this.configStatus = r.ok ? 'ok' : 'err';
-        },
-        async loadHealth() {
-          const r = await this.call('/admin/health');
-          if (r.ok) {
-            this.state.hfsqlHealthy = r.data?.isHealthy ?? false;
-            this.state.lastHealth = r.data?.status ?? 'N/A';
-            this.state.lastHealthTime = r.data?.timestamp ?? null;
-          }
-          this.stateDump.health = r.data;
-        },
-        async loadState() {
-          const r = await this.call('/admin/state');
-          if (r.ok) {
-            this.state.lastCycle = r.data?.lastCycle ?? '-';
-            this.state.lastCycleStatus = r.data?.lastStatus ?? '';
-            this.state.lastError = r.data?.lastError ?? '';
-          }
-          this.stateDump.state = r.data;
-        },
-        async refreshLogs() {
-          const r = await this.call('/admin/logs');
-          if (Array.isArray(r.data)) this.logs = r.data;
-        },
-        clearLogsView() { this.logs = []; },
-        async refreshAll() {
-          await this.loadConfig();
-          await this.loadHealth();
-          await this.loadState();
-          await this.refreshLogs();
-        },
-        formatDate(ts) { if (!ts) return '-'; return new Date(ts).toLocaleString(); },
-        formatDateTime(ts) { if (!ts) return '-'; return new Date(ts).toLocaleString(); },
-        json(obj) { return JSON.stringify(obj ?? {}, null, 2); },
-        levelClass(level) {
-          const map = { INF: 'bg-green-500/20 text-green-200', WRN: 'bg-amber-500/20 text-amber-200', ERR: 'bg-red-500/20 text-red-200' };
-          return (map[level] || 'bg-white/10 text-slate-200') + ' pill px-2';
-        }
-      }
-    }
-  </script>
+    <script src="/admin/js/dashboard.js"></script>
 </body>
 </html>

@@ -68,6 +68,7 @@ public class ApiKeyIngestionHandler : IApiKeyIngestionHandler
         var champsReçus = CompterChampsSdi12(payload);
         var estPartiel = champsReçus > 0 && champsReçus < attendu; // payload partiel : on ne bloque pas l'agrégation
 
+        // Si payload partiel, on n'émet pas de notification de doublon; apenas quando não é parcial
         if (!estPartiel && DeviceTransmissionGuard.IsDuplicateMeasurement(device.LastSendAt, measurementTimestampUtc))
         {
             // Send notification to Doublons topic + record metrics

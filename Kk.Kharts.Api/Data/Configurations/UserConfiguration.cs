@@ -2,6 +2,10 @@
 using Kk.Kharts.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Linq;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Kk.Kharts.Api.Data.Configurations
 {
@@ -56,6 +60,49 @@ namespace Kk.Kharts.Api.Data.Configurations
                .HasColumnName("header_value")
                    .HasColumnOrder(8)
                    .HasDefaultValue("demo");
+
+            // OneSignal settings (owned type stored on Users table)
+            var playerIdsConverter = new ValueConverter<List<string>, string>(
+                v => string.Join(',', v ?? new List<string>()),
+                v => string.IsNullOrWhiteSpace(v)
+                        ? new List<string>()
+                        : v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim())
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .ToList());
+
+            var playerIdsComparer = new ValueComparer<List<string>>(
+                (a, b) => (a ?? new List<string>()).SequenceEqual(b ?? new List<string>()),
+                v => (v ?? new List<string>()).Aggregate(0, (h, s) => HashCode.Combine(h, s.GetHashCode())),
+                v => v == null ? new List<string>() : v.ToList());
+
+            builder.OwnsOne(u => u.OneSignal, nav =>
+            {
+                nav.Property(p => p.AppId)
+                   .HasColumnName("onesignal_app_id")
+                   .HasMaxLength(64);
+
+                nav.Property(p => p.ApiKey)
+                   .HasColumnName("onesignal_api_key")
+                   .HasMaxLength(128);
+
+                nav.Property(p => p.PlayerId)
+                   .HasColumnName("onesignal_player_id")
+                   .HasMaxLength(128);
+
+                nav.Property(p => p.PlayerIds)
+                   .HasColumnName("onesignal_player_ids")
+                   .HasConversion(playerIdsConverter)
+                   .Metadata.SetValueComparer(playerIdsComparer);
+
+                nav.Property(p => p.Title)
+                   .HasColumnName("onesignal_title")
+                   .HasMaxLength(120);
+
+                nav.Property(p => p.MessageTemplate)
+                   .HasColumnName("onesignal_message_template")
+                   .HasMaxLength(512);
+            });
 
             builder.Property(u => u.LastUserAgent)
                    .HasColumnName("last_user_agent")

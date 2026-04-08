@@ -3,6 +3,7 @@ using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Shared.Constants;
 using Kk.Kharts.Shared.Entities;
 using System.Globalization;
+using System.Net;
 
 namespace Kk.Kharts.Api.Services.Notifications;
 
@@ -183,6 +184,23 @@ public sealed class AlertNotificationFactory
             title: "Alerte résolue",
             bodyHtml: html,
             bodyText: text,
+            occurredAt: DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>
+    /// Constrói uma notificação mínima (texto único) para testes ou mensagens livres.
+    /// </summary>
+    public AlertNotification CreateMinimal(string title, string bodyText)
+    {
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(bodyText);
+
+        var safeHtml = WebUtility.HtmlEncode(bodyText).Replace("\n", "<br/>");
+
+        return new AlertNotification(
+            title: title,
+            bodyHtml: safeHtml,
+            bodyText: bodyText,
             occurredAt: DateTimeOffset.UtcNow);
     }
 

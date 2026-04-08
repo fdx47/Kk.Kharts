@@ -5,8 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KropKontrol - Staff Portal</title>
-    <script type="module" crossorigin src="/staff/assets/index-9zRGj3PE.js"></script>
-    <link rel="stylesheet" crossorigin href="/staff/assets/index-CxPTd9Eo.css">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
+    <script>
+      // Register OneSignal service worker only in localhost
+      // In production, OneSignal SDK will manage it automatically
+    </script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        if (window.__oneSignalInitDone) return;
+        await OneSignal.init({
+          appId: '773b3554-2728-4944-aee2-2a8f88faa07a',
+          allowLocalhostAsSecureOrigin: true
+        });
+        window.__oneSignalInitDone = true;
+      });
+    </script>
+    <script type="module" crossorigin src="/staff/assets/index-A5LRl5QY.js"></script>
+    <link rel="stylesheet" crossorigin href="/staff/assets/index-n023yjWP.css">
   </head>
   <body>
     <div id="app"></div>

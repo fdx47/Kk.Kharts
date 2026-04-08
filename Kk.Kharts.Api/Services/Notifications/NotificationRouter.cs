@@ -12,7 +12,8 @@ public sealed class NotificationRouter : INotificationRouter
     {
         (NotificationChannelType.Telegram, NotificationChannelPreference.Telegram),
         (NotificationChannelType.Pushover, NotificationChannelPreference.Pushover),
-        (NotificationChannelType.Email, NotificationChannelPreference.Email)
+        (NotificationChannelType.Email, NotificationChannelPreference.Email),
+        (NotificationChannelType.OneSignal, NotificationChannelPreference.OneSignal)
     };
 
     public NotificationRouter(IEnumerable<INotificationChannel> channels, ILogger<NotificationRouter> logger)

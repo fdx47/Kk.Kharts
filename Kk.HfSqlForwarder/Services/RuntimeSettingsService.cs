@@ -1,7 +1,6 @@
 using HfSqlForwarder.Settings;
-using System.Text.Json;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace HfSqlForwarder.Services;
 

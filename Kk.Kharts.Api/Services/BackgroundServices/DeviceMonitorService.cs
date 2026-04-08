@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Kk.Kharts.Api.Data;
+﻿using Kk.Kharts.Api.Data;
 using Kk.Kharts.Api.Services.IService;
 using Kk.Kharts.Api.Services.Telegram;
 using Kk.Kharts.Shared.Entities;
@@ -130,114 +128,117 @@ namespace Kk.Kharts.Api.Services.BackgroundServices
                         // Converte LastSeenAt para horário de Paris para exibir quando voltou
                         var parisTime = _timeZoneService.ConvertToParisTime(device.LastSeenAt);
 
-                        var recoveryMessage = $"""
-                            ✅ <b>Périphérique en ligne</b>
+                        // Telegram recovery notifications desactivadas a pedido: bloco comentado
+                        //var recoveryMessage = $"""
+                        //    ✅ <b>Périphérique en ligne</b>
+                        //
+                        //    • Nom : {device.Name}
+                        //    • Description : {device.Description}
+                        //    • Entreprise : {device.Company?.Name ?? "N/A"}
+                        //    • DevEui : {device.DevEui}
+                        //
+                        //    ➡️ Communication rétablie le {parisTime:dd/MM/yy HH:mm:ss} (Paris)
+                        //    """;
 
-                            • Nom : {device.Name}
-                            • Description : {device.Description}
-                            • Entreprise : {device.Company?.Name ?? "N/A"}
-                            • DevEui : {device.DevEui}
+                        //// Apagar alertas anteriores
+                        //var offlineNotifs = await dbContext.DeviceStatusNotifications
+                        //    .Where(n => n.DevEui == device.DevEui && n.IsActive && n.Type == "offline")
+                        //    .ToListAsync(stoppingToken);
 
-                            ➡️ Communication rétablie le {parisTime:dd/MM/yy HH:mm:ss} (Paris)
-                            """;
+                        //foreach (var notif in offlineNotifs)
+                        //{
+                        //    try
+                        //    {
+                        //        // Remove a mensagem "offline" que estava ativa no tópico do Telegram
+                        //        await _telegram.DeleteFromDeviceStatusTopicAsync(notif.MessageId, stoppingToken);
+                        //        notif.IsActive = false;
+                        //    }
+                        //    catch (Exception ex)
+                        //    {
+                        //        var contexte = $"Suppression Telegram impossible (DevEui: {device.DevEui}, MessageId: {notif.MessageId}, NotificationId: {notif.Id})";
+                        //        _logger.LogWarning(ex, contexte);
 
-                        // Apagar alertas anteriores
-                        var offlineNotifs = await dbContext.DeviceStatusNotifications
-                            .Where(n => n.DevEui == device.DevEui && n.IsActive && n.Type == "offline")
-                            .ToListAsync(stoppingToken);
+                        //        var detailMessage = $"""
+                        //            ⚠️ <b>Suppression Telegram échouée</b>
 
-                        foreach (var notif in offlineNotifs)
-                        {
-                            try
-                            {
-                                // Remove a mensagem "offline" que estava ativa no tópico do Telegram
-                                await _telegram.DeleteFromDeviceStatusTopicAsync(notif.MessageId, stoppingToken);
-                                notif.IsActive = false;
-                            }
-                            catch (Exception ex)
-                            {
-                                var contexte = $"Suppression Telegram impossible (DevEui: {device.DevEui}, MessageId: {notif.MessageId}, NotificationId: {notif.Id})";
-                                _logger.LogWarning(ex, contexte);
+                        //            • DevEui : {device.DevEui}
+                        //            • Nom : {device.Name}
+                        //            • Entreprise : {device.Company?.Name}
+                        //            • NotificationId : {notif.Id}
+                        //            • MessageId : {notif.MessageId}
 
-                                var detailMessage = $"""
-                                    ⚠️ <b>Suppression Telegram échouée</b>
+                        //            Raison : {_telegram.EscapeHtml(ex.Message)}
+                        //            """;
 
-                                    • DevEui : {device.DevEui}
-                                    • Nom : {device.Name}
-                                    • Entreprise : {device.Company?.Name}
-                                    • NotificationId : {notif.Id}
-                                    • MessageId : {notif.MessageId}
+                        //        await _telegram.SendToDebugTopicAsync(detailMessage, ct: stoppingToken);
+                        //    }
+                        //}
 
-                                    Raison : {_telegram.EscapeHtml(ex.Message)}
-                                    """;
+                        //if (offlineNotifs.Count > 0)
+                        //{
+                        //    removalSummaries.Add($"• {device.Name} ({device.Company?.Name ?? "N/A"}) : {offlineNotifs.Count} message(s)");
+                        //}
 
-                                await _telegram.SendToDebugTopicAsync(detailMessage, ct: stoppingToken);
-                            }
-                        }
+                        //var recoveryMessageId = await _telegram.SendToDeviceStatusTopicWithIdAsync(recoveryMessage, ct: stoppingToken);
 
-                        if (offlineNotifs.Count > 0)
-                        {
-                            removalSummaries.Add($"• {device.Name} ({device.Company?.Name ?? "N/A"}) : {offlineNotifs.Count} message(s)");
-                        }
+                        //await notificationService.NotifyDeviceOnlineAsync(device, stoppingToken);
 
-                        var recoveryMessageId = await _telegram.SendToDeviceStatusTopicWithIdAsync(recoveryMessage, ct: stoppingToken);
+                        //if (recoveryMessageId.HasValue)
+                        //{
+                        //    var onlineNotif = new DeviceStatusNotification
+                        //    {
+                        //        DeviceId = device.Id,
+                        //        DevEui = device.DevEui,
+                        //        MessageId = recoveryMessageId.Value,
+                        //        Type = "online",
+                        //        SentAtUtc = DateTime.UtcNow,
+                        //        IsActive = true
+                        //    };
+                        //    dbContext.DeviceStatusNotifications.Add(onlineNotif);
 
-                        await notificationService.NotifyDeviceOnlineAsync(device, stoppingToken);
+                        //    // Agenda limpeza automática da mensagem de recuperação após 15 minutos
+                        //    _ = Task.Run(async () =>
+                        //    {
+                        //        try
+                        //        {
+                        //            await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
 
-                        if (recoveryMessageId.HasValue)
-                        {
-                            var onlineNotif = new DeviceStatusNotification
-                            {
-                                DeviceId = device.Id,
-                                DevEui = device.DevEui,
-                                MessageId = recoveryMessageId.Value,
-                                Type = "online",
-                                SentAtUtc = DateTime.UtcNow,
-                                IsActive = true
-                            };
-                            dbContext.DeviceStatusNotifications.Add(onlineNotif);
+                        //            await _telegram.DeleteFromDeviceStatusTopicAsync(recoveryMessageId.Value, stoppingToken);
 
-                            // Agenda limpeza automática da mensagem de recuperação após 15 minutos
-                            _ = Task.Run(async () =>
-                            {
-                                try
-                                {
-                                    await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
-
-                                    await _telegram.DeleteFromDeviceStatusTopicAsync(recoveryMessageId.Value, stoppingToken);
-
-                                    using var cleanupScope = scopeFactory.CreateScope();
-                                    var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-                                    var notifToUpdate = await cleanupDb.DeviceStatusNotifications
-                                        .FirstOrDefaultAsync(n => n.MessageId == recoveryMessageId.Value, stoppingToken);
-                                    if (notifToUpdate is not null)
-                                    {
-                                        notifToUpdate.IsActive = false;
-                                        await cleanupDb.SaveChangesAsync(stoppingToken);
-                                    }
-                                }
-                                catch (TaskCanceledException)
-                                {
-                                    // ignore cancellation
-                                    await _telegram.SendToDebugTopicAsync(" -<DeviceMonitorService>- TaskCanceledException ", ct: stoppingToken);
-                                }
-                            }, stoppingToken);
-                        }
+                        //            using var cleanupScope = scopeFactory.CreateScope();
+                        //            var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                        //            var notifToUpdate = await cleanupDb.DeviceStatusNotifications
+                        //                .FirstOrDefaultAsync(n => n.MessageId == recoveryMessageId.Value, stoppingToken);
+                        //            if (notifToUpdate is not null)
+                        //            {
+                        //                notifToUpdate.IsActive = false;
+                        //                await cleanupDb.SaveChangesAsync(stoppingToken);
+                        //            }
+                        //        }
+                        //        catch (TaskCanceledException)
+                        //        {
+                        //            // ignore cancellation
+                        //            await _telegram.SendToDebugTopicAsync(" -<DeviceMonitorService>- TaskCanceledException ", ct: stoppingToken);
+                        //        }
+                        //    }, stoppingToken);
+                        //}
                     }
 
 
                     // Persiste todas as alterações feitas neste ciclo
                     await dbContext.SaveChangesAsync(stoppingToken);
 
-                    if (removalSummaries.Count > 0)
-                    {
-                        var removalMessage = $"""
-                            🧹 <b>Nettoyage d'alertes</b>
+                    // Nettoyage d'alertes no telegram 
 
-                            {string.Join("\n", removalSummaries)}
-                            """;
-                        await _telegram.SendToDebugTopicAsync(removalMessage, ct: stoppingToken);
-                    }
+                    //if (removalSummaries.Count > 0)
+                    //{
+                    //    var removalMessage = $"""
+                    //        🧹 <b>Nettoyage d'alertes</b>
+
+                    //        {string.Join("\n", removalSummaries)}
+                    //        """;
+                    //    await _telegram.SendToDebugTopicAsync(removalMessage, ct: stoppingToken);
+                    //}
                 }
                 catch (Exception ex)
                 {

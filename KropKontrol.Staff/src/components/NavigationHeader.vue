@@ -61,6 +61,15 @@
               <i class="bi bi-shield-lock"></i>
               2FA
             </button>
+            <button
+              class="nav-chip"
+              :class="{ active: $route.name === 'OneSignalTest' }"
+              @click="$router.push('/onesignal-test')"
+              title="Test push OneSignal"
+            >
+              <i class="bi bi-bell"></i>
+              OneSignal
+            </button>
           </div>
 
           <div class="toolbar-controls">

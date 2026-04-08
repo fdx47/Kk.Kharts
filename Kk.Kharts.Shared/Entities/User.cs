@@ -42,6 +42,7 @@ namespace Kk.Kharts.Shared.Entities
 
         public NotificationChannelPreference NotificationPreference { get; set; } = NotificationChannelPreference.Telegram;
         public PushoverSettings? Pushover { get; set; }
+        public OneSignalSettings? OneSignal { get; set; }
 
         // Two-Factor Authentication (2FA) - Compatible Google Authenticator / Microsoft Authenticator
         public bool TwoFactorEnabled { get; set; } = false;

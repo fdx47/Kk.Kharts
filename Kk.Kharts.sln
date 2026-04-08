@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kk.StoreAndForward", "Kk.St
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kk.GatewayFinder.Win", "Kk.GatewayFinder.Win\Kk.GatewayFinder.Win.csproj", "{56B9F5B4-25E4-4BE7-A2F1-FA0F536C66E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HfSqlForwarder", "Kk.HfSqlForwarder\HfSqlForwarder.csproj", "{8320C9D0-8C9A-EBA6-91B2-C88ED12F16A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kk.HfSqlForwarder", "Kk.HfSqlForwarder\Kk.HfSqlForwarder.csproj", "{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -127,6 +127,18 @@ Global
 		{8320C9D0-8C9A-EBA6-91B2-C88ED12F16A1}.Release|x64.Build.0 = Release|Any CPU
 		{8320C9D0-8C9A-EBA6-91B2-C88ED12F16A1}.Release|x86.ActiveCfg = Release|Any CPU
 		{8320C9D0-8C9A-EBA6-91B2-C88ED12F16A1}.Release|x86.Build.0 = Release|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Debug|x64.Build.0 = Debug|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Debug|x86.Build.0 = Debug|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Release|x64.ActiveCfg = Release|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Release|x64.Build.0 = Release|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Release|x86.ActiveCfg = Release|Any CPU
+		{B96E9188-9EF4-42F7-B8D5-8E817D54C9A7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

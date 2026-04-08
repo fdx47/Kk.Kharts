@@ -1,13 +1,14 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
-import { jwtDecode } from 'jwt-decode'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import 'vue3-toastify/dist/index.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import Vue3Toastify from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { authService } from './services/api'
+import { ensureReady as ensureOneSignalReady } from './services/onesignal'
 
 // Import des vues
 import LoginView from './views/LoginView.vue'
@@ -16,6 +17,7 @@ import VpnProfilesView from './views/VpnProfilesView.vue'
 import LogsView from './views/LogsView.vue'
 import MiseEnServiceView from './views/MiseEnServiceView.vue'
 import TwoFactorAuthView from './views/TwoFactorAuthView.vue'
+import OneSignalTestView from './views/OneSignalTestView.vue'
 
 // Configuration du routeur
 const routes = [
@@ -54,6 +56,12 @@ const routes = [
     name: 'TwoFactorAuth',
     component: TwoFactorAuthView,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/onesignal-test',
+    name: 'OneSignalTest',
+    component: OneSignalTestView,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -62,37 +70,31 @@ const router = createRouter({
   routes
 })
 
-// Guard de navigation pour vérifier l'authentification et le rôle Root
+// Guard de navigation (auth stricte + rôle Root)
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('authToken')
+  const isAuth = authService.isAuthenticated()
 
-  if (to.meta.requiresAuth && !token) {
+  if (to.meta.requiresAuth && !isAuth) {
+    authService.logout()
     next({ path: '/login' })
     return
-  } else if (to.path === '/login' && token) {
+  }
+
+  if (to.path === '/login' && isAuth) {
     next({ path: '/' })
     return
-  } else if (to.meta.requiresAuth && token) {
-    try {
-      const decoded = jwtDecode(token)
-      const role = decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+  }
 
-      if (role !== 'Root') {
-        localStorage.removeItem('authToken')
-        localStorage.removeItem('refreshToken')
-        next({ path: '/login' })
-        return
-      }
-    } catch (error) {
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('refreshToken')
+  if (to.meta.requiresAuth && isAuth) {
+    const role = authService.getUserRole()
+    if (role !== 'Root') {
+      authService.logout()
       next({ path: '/login' })
       return
     }
-    next()
-  } else {
-    next()
   }
+
+  next()
 })
 
 const app = createApp(App)
@@ -120,6 +122,12 @@ if (import.meta.env.DEV) {
 }
 
 app.mount('#app')
+
+// Initialiser OneSignal dès le chargement (ne demande pas la permission ici)
+ensureOneSignalReady().catch((err) => {
+  // Silencieux en prod; consulter la console pour diagnostics (MIME SW, domaine, permissions)
+  console.warn('OneSignal init auto: ' + err)
+})
 
 // Verificação se o app montou corretamente - silencioso
 setTimeout(() => {

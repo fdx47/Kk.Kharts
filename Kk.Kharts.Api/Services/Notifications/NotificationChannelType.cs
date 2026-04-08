@@ -4,5 +4,6 @@ public enum NotificationChannelType
 {
     Telegram,
     Pushover,
-    Email
+    Email,
+    OneSignal
 }

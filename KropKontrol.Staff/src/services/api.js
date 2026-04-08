@@ -86,6 +86,14 @@ const isRefreshTokenExpired = () => {
   return Date.now() >= new Date(expiry).getTime()
 }
 
+const isSessionValid = () => {
+  const token = getStoredAccessToken()
+  if (!token) return false
+  if (isRefreshTokenExpired()) return false
+  // exp <= now -> inválido
+  return !isTokenExpiringSoon(token, 0)
+}
+
 const isTokenExpiringSoon = (token, thresholdSeconds = 60) => {
   if (!token) return true
   try {
@@ -138,9 +146,7 @@ const refreshAccessToken = async () => {
 const ensureFreshToken = async () => {
   const token = getStoredAccessToken()
   if (!token) {
-    if (isRefreshTokenExpired()) {
-      clearAuthData()
-    }
+    if (isRefreshTokenExpired()) clearAuthData()
     return
   }
 
@@ -212,15 +218,7 @@ export const authService = {
   },
 
   isAuthenticated() {
-    const token = localStorage.getItem('authToken')
-    if (!token) return false
-
-    try {
-      const decoded = jwtDecode(token)
-      return decoded.exp * 1000 > Date.now()
-    } catch {
-      return false
-    }
+    return isSessionValid()
   },
 
   getUserRole() {
